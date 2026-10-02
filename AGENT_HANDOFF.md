@@ -12,7 +12,7 @@
 ## 已完成與驗證
 
 - React／TypeScript／Vite Dashboard、Node／Express 本機服務、gh GraphQL 同步。
-- 近一年 31 個非 fork repos 完整同步，partial=false；資料在忽略的 `.cache/report.json`。
+- 初次同步近一年 31 個非 fork repos；新 repo 建立後透過本機 API 再同步，32/32 完成、error=null、partial=false，Dashboard repo 狀態 complete。資料在忽略的 `.cache/report.json`。
 - 台北日期歸日、固定 HEAD 分頁、作者 ID 篩選、merge 排除、去重、補零、CSV 與列印。
 - 桌面／手機日期和 repo 篩選、趨勢圖、全年熱圖、排行、每日明細、載入與錯誤狀態。
 - `npm.cmd test`：10 項通過；`npm.cmd run build`：型別與 build 通過。
