@@ -5,9 +5,9 @@
 - 使用者要求建立好看的 GitHub 每日代碼增刪行數 Dashboard，並更新到新的 GitHub repo。
 - GitHub CLI 已登入 `renewclincdaniel-coder`。
 - 使用者已確認規格目錄 `specs/github-dashboard` 與目前帳號。
-- spec.md、plan.md、tasks.md 均已獲使用者確認，T001–T009 已完成。
+- spec.md、plan.md、tasks.md 均已獲使用者確認，T001–T010 全部完成。
 - 統計只讀取 repository metadata 與 commit 數值，不取得原始碼、patch、commit 訊息、email 或憑證。
-- 對外建立與推送 repo 前，先完成可審閱成果；建議 PRIVATE `github-code-dashboard`。
+- 使用者已確認建立私人 repo 並推送；repo 為 https://github.com/renewclincdaniel-coder/github-code-dashboard ，default branch 為 main。
 
 ## 已完成與驗證
 
@@ -22,7 +22,9 @@
 - 預覽服務為 `http://127.0.0.1:4317`；若已停止，執行 `npm.cmd start`。
 - `README.md` 提供完整安裝、資料規則、限制與驗證指令。
 
-## 待辦
+## Git 與交付
 
-- Git 已初始化為 main；35 個 source／文件已暫存。快取、截圖與 build 均排除；憑證模式檢查 0 命中，`git diff --cached --check` 通過。
-- 確認 PRIVATE repo 名稱與推送，建立後核對遠端 HEAD。
+- Git 已初始化為 main；35 個 source／文件已提交。快取、截圖與 build 均排除；憑證模式檢查 0 命中，`git diff --cached --check` 通過。
+- 首次 source commit `ef45e1e` 已推送，遠端 main 與本機 HEAD 核對一致，可見性 PRIVATE。
+- 後續完成紀錄提交請以 `git rev-parse HEAD` 和 `git ls-remote --heads origin main` 核對。
+- 本機報告可按「同步」更新；新建的 Dashboard repo 也會納入後續統計。

@@ -2,7 +2,7 @@
 
 **對應計畫**：`specs/github-dashboard/plan.md`
 **日期**：2026-10-02
-**狀態**：已確認，實作中（2026-10-02）
+**狀態**：已完成（2026-10-02）
 
 ## Setup
 
@@ -24,7 +24,7 @@
 
 - [x] T008 在 `tests/dashboard.e2e.ts` 驗證桌面／手機、篩選、匯出、同步與空結果；執行型別、核心測試、build 與瀏覽器畫面檢查，相依 T007。
 - [x] T009 在 `README.md`、`AGENT_HANDOFF.md` 記錄安裝、規則、限制與驗證；逐條對照 `spec.md`，確認 source 不含快取或憑證，相依 T008。
-- [ ] T010 完成可審閱成果後確認 PRIVATE `github-code-dashboard` repo 的具體名稱與推送；獲確認後建立、提交、推送並核對遠端，相依 T009。
+- [x] T010 完成可審閱成果後確認 PRIVATE `github-code-dashboard` repo 的具體名稱與推送；獲確認後建立、提交、推送並核對遠端，相依 T009。
 
 ## 執行規則
 
