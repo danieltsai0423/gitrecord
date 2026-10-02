@@ -1,0 +1,20 @@
+node_modules/
+dist/
+dist-server/
+.cache/
+artifacts/
+test-results/
+playwright-report/
+*.log
+.env
+*.env
+.env.*
+*.pem
+*.key
+*.pfx
+*.p12
+bitwarden_import.csv
+07 賬密備份/
+Management/02_帳號密碼總表.md
+.DS_Store
+Thumbs.db
