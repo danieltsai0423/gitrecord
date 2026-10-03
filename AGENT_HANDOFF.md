@@ -1,4 +1,14 @@
-# 專案進度
+# GitRecord — 專案交接
+
+更新日期：2026-10-03（Asia/Taipei）
+
+- Daniel 已確認名稱為 **GitRecord**，網頁品牌、GitHub repo 與本地資料夾統一改名。
+- 目前版本屬於個人帳號 `danieltsai0423` 的 private repo；以 `git remote -v` 確認目前位置。
+- 本地專案入口：`C:\Users\User\Desktop\Road to AU\GitRecord`。安裝、執行、資料規則與驗證以 `README.md` 為準。
+- 同步使用當下 `gh` active account；讀取真實資料前先確認 `gh auth status`。快取留在本機 `.cache/`。
+- 下方及 `specs/github-dashboard/` 記錄原始工作帳號的交付背景；其中帳號與 repo 名稱屬歷史資料，當前位置以上方與 Git remote 為準。
+
+## 原始交付紀錄
 
 日期：2026-10-02（Asia/Taipei）
 

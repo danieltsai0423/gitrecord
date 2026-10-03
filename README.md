@@ -1,6 +1,8 @@
-# Gitfolio · GitHub 代碼統計 Dashboard
+# GitRecord · GitHub 活動紀錄
 
 以真實 GitHub commit 資料查看每日新增、刪除、淨增行數與活動趨勢。介面為繁體中文，支援桌面與手機。私人 repository 的統計只保存在本機。
+
+原始碼：[danieltsai0423/gitrecord](https://github.com/danieltsai0423/gitrecord)（private repo）。
 
 ## 啟動
 

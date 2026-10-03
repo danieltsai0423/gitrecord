@@ -138,7 +138,7 @@ export default function App() {
             <IconChartArcs size={25} stroke={1.7} />
           </span>
           <span>
-            gitfolio<span className="brand-period">.</span>
+            GitRecord<span className="brand-period">.</span>
           </span>
         </a>
         <div className="workspace">
@@ -211,7 +211,7 @@ export default function App() {
           <div>
             <span className="mobile-brand">
               <IconChartArcs size={20} />
-              gitfolio.
+              GitRecord.
             </span>
             <span className="breadcrumb">
               工作空間<span>/</span>

@@ -7,7 +7,7 @@ if (!Number.isInteger(port) || port < 1024 || port > 65535)
 try {
   const app = createApp({ initialReport: await loadReport() });
   const server = app.listen(port, "127.0.0.1", () =>
-    console.log(`Gitfolio 已啟動：http://127.0.0.1:${port}`),
+    console.log(`GitRecord 已啟動：http://127.0.0.1:${port}`),
   );
   server.on("error", (error: NodeJS.ErrnoException) => {
     console.error(
