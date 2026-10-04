@@ -1,12 +1,20 @@
-# GitRecord
+<h1 align="center">GitRecord</h1>
 
-**Your code, over time.** A local dashboard for GitHub commit activity, multi-account reviews, and privacy-aware exports.
+<p align="center">
+  <strong>Your code, over time.</strong><br>
+  A local dashboard for GitHub commit activity, multi-account reviews, and privacy-aware exports.
+</p>
 
-**English** · [繁體中文](README.zh-TW.md)
+<p align="center">
+  <a href="README.md"><img src="docs/badges/language-en-active.svg" alt="English — current language" width="128" height="36"></a>
+  <a href="README.zh-TW.md"><img src="docs/badges/language-zh-TW.svg" alt="Switch to 繁體中文" width="128" height="36"></a>
+</p>
 
-[![MIT License](https://img.shields.io/badge/license-MIT-green)](LICENSE)
-[![Node.js](https://img.shields.io/badge/Node.js-%E2%89%A522.12-43853d)](https://nodejs.org/)
-[![Validation](https://github.com/danieltsai0423/gitrecord/actions/workflows/validate.yml/badge.svg)](https://github.com/danieltsai0423/gitrecord/actions/workflows/validate.yml)
+<p align="center">
+  <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-green" alt="MIT License"></a>
+  <a href="https://nodejs.org/"><img src="https://img.shields.io/badge/Node.js-%E2%89%A522.12-43853d" alt="Node.js ≥22.12"></a>
+  <a href="https://github.com/danieltsai0423/gitrecord/actions/workflows/validate.yml"><img src="https://github.com/danieltsai0423/gitrecord/actions/workflows/validate.yml/badge.svg" alt="Validation"></a>
+</p>
 
 GitRecord turns saved GitHub commit statistics into daily trends, repository breakdowns, and period reviews. Connect personal accounts through GitHub, synchronize them one at a time, and view their activity together. Reports stay on your computer.
 

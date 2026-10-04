@@ -1,12 +1,20 @@
-# GitRecord
+<h1 align="center">GitRecord</h1>
 
-**代碼的每一份進展。** 在本機查看 GitHub commit 活動、整合多帳號回顧，並產生可遮名的分享報告。
+<p align="center">
+  <strong>代碼的每一份進展。</strong><br>
+  在本機查看 GitHub commit 活動、整合多帳號回顧，並產生可遮名的分享報告。
+</p>
 
-[English](README.md) · **繁體中文**
+<p align="center">
+  <a href="README.md"><img src="docs/badges/language-en.svg" alt="切換至 English" width="128" height="36"></a>
+  <a href="README.zh-TW.md"><img src="docs/badges/language-zh-TW-active.svg" alt="繁體中文 — 目前語言" width="128" height="36"></a>
+</p>
 
-[![MIT License](https://img.shields.io/badge/license-MIT-green)](LICENSE)
-[![Node.js](https://img.shields.io/badge/Node.js-%E2%89%A522.12-43853d)](https://nodejs.org/)
-[![Validation](https://github.com/danieltsai0423/gitrecord/actions/workflows/validate.yml/badge.svg)](https://github.com/danieltsai0423/gitrecord/actions/workflows/validate.yml)
+<p align="center">
+  <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-green" alt="MIT License"></a>
+  <a href="https://nodejs.org/"><img src="https://img.shields.io/badge/Node.js-%E2%89%A522.12-43853d" alt="Node.js ≥22.12"></a>
+  <a href="https://github.com/danieltsai0423/gitrecord/actions/workflows/validate.yml"><img src="https://github.com/danieltsai0423/gitrecord/actions/workflows/validate.yml/badge.svg" alt="Validation"></a>
+</p>
 
 GitRecord 將保存的 GitHub commit 統計整理為每日趨勢、repository 分布與期間回顧。各個人帳號透過 GitHub 授權、依序同步，既能合併查看，也能分別分析；報告保存在自己的電腦。
 

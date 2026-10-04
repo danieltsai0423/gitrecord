@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="128" height="36" viewBox="0 0 128 36" role="img" aria-labelledby="title">
+  <title id="title">切換至繁體中文</title>
+  <rect x="0.5" y="0.5" width="127" height="35" rx="8" fill="#18211b" stroke="#536659"/>
+  <text x="64" y="23" text-anchor="middle" fill="#d7e6dc" font-family="Segoe UI, Microsoft JhengHei, Noto Sans TC, sans-serif" font-size="14" font-weight="600">繁體中文</text>
+</svg>
