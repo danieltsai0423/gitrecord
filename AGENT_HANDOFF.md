@@ -1,6 +1,8 @@
 # GitRecord — 專案交接
 
-更新日期：2026-10-04（Asia/Taipei）
+更新日期：2026-10-05（Asia/Taipei）
+
+- **版面順序**：回顧與節奏移至每日報告下方、頁尾之前，側欄入口也排在最後。README 兩張總覽展示圖完整涵蓋代碼變更趨勢及年度活動熱圖，截圖高度依熱圖底部決定。文件與 `specs/reflection-workspace/spec.md` 同步更新；本次 production build、56 項桌面／手機 E2E 通過，7 張範例截圖重新產生，無殘留名稱、整頁溢出或 pageerror，已查看深淺總覽、期間回顧與手機目標。
 
 - **開源版文件**：英文入口 `README.md`，繁體中文 `README.zh-TW.md`，授權 `LICENSE`（MIT）。已加入 `CONTRIBUTING.md`、`SECURITY.md` 及 Windows／Node 22 自動驗證。`docs/images/` 的 7 張文件截圖只使用範例資料，帳號與所有專案名稱於截圖前以不透明遮罩取代；重建命令 `npm.cmd run docs:screenshots`，不讀取 `.cache/` 或真人憑證。Git 歷史與待提交檔案需先通過憑證模式／本機資料檢查；實際帳號截圖仍留在忽略的 `artifacts/`。
 - **回顧與節奏工作台已完成**：Daniel 要求借鑑同類工具的優點並依 GitRecord 用途調整改進。三個分頁整合期間摘要、相同日期／尺度的帳號對照、週活躍日目標；新增多帳號共同活躍日，跨帳號日期去重。目標預設未設定，依 user ID／合計範圍在瀏覽器保存，涵蓋選取結束日所在的週一至週日，使用帳號範圍的全部 repos、不受 repo 篩選影響。資料不足不當成零，也不推算 streak 或前期變化。回顧卡支援本機 PNG／Markdown、預覽與固定資料快照，預設遮住帳號和私人 repo 名稱，保留各帳號的同步時間／涵蓋。未增加 API 權限或套件。需求見 `specs/reflection-workspace/spec.md`，模型見 `shared/reflection.ts`，使用方式見 README。

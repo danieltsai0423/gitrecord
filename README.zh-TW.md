@@ -20,7 +20,7 @@ GitRecord 將保存的 GitHub commit 統計整理為每日趨勢、repository �
 
 **一般使用者不必安裝 GitHub CLI、手動輸入 token，或建立自己的 GitHub App。**
 
-![GitRecord 繁體中文淺色介面，帳號與專案名稱皆已遮蔽](docs/images/dashboard-light-zh-TW.png)
+![GitRecord 淺色總覽，完整呈現代碼變更趨勢及年度活動熱圖，帳號與專案名稱皆已遮蔽](docs/images/dashboard-light-zh-TW.png)
 
 *所有截圖都使用範例資料；包含公開 repository 在內的帳號與專案名稱，均在截圖前以不透明遮罩取代。*
 
@@ -105,7 +105,7 @@ GitHub 授權與 App 安裝是兩個步驟，每個帳號第一次各自完成�
 
 ## 回顧自己的工作
 
-「回顧與節奏」工作台沿用全域帳號與日期篩選；期間回顧和帳號對照也沿用 repository 篩選。
+「回顧與節奏」位於「每日報告」下方，也可透過側欄最後一個項目直接跳轉。工作台沿用全域帳號與日期篩選；期間回顧和帳號對照也沿用 repository 篩選。
 
 ### 期間回顧
 
@@ -148,7 +148,7 @@ GitHub 授權與 App 安裝是兩個步驟，每個帳號第一次各自完成�
 
 ### 深色與英文介面
 
-![英文深色 Dashboard，帳號與專案名稱均已遮蔽](docs/images/dashboard-dark-en.png)
+![英文深色總覽，完整呈現代碼變更趨勢及年度活動熱圖，帳號與專案名稱均已遮蔽](docs/images/dashboard-dark-en.png)
 
 ### 期間回顧
 

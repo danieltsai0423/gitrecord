@@ -200,10 +200,10 @@ export default function App() {
         <nav aria-label={t("Dashboard 導覽")}>
           {[
             ["overview", t("總覽"), IconLayoutDashboard],
-            ["reflection", t("回顧與節奏"), IconNotebook],
             ["activity", t("活動紀錄"), IconActivity],
             ["repositories", "Repositories", IconGitBranch],
             ["daily", t("每日報告"), IconChartLine],
+            ["reflection", t("回顧與節奏"), IconNotebook],
           ].map(([id, label, Glyph]) => {
             const Icon = Glyph as typeof IconActivity;
             return (
@@ -594,10 +594,6 @@ export default function App() {
                     </div>
                   ))}
                 </section>
-                <ReflectionWorkspace report={report} start={start} end={end} repository={selectedRepo} light={theme === "light"} combined={selectedAccount === "all"} onPeriod={(days) => {
-                  setPeriod(days);
-                  setShowAllDays(false);
-                }} />
                 <div className="charts-row">
                   <section className="panel trend-panel">
                     <div className="panel-heading">
@@ -757,6 +753,10 @@ export default function App() {
                     </div>
                   )}
                 </section>
+                <ReflectionWorkspace report={report} start={start} end={end} repository={selectedRepo} light={theme === "light"} combined={selectedAccount === "all"} onPeriod={(days) => {
+                  setPeriod(days);
+                  setShowAllDays(false);
+                }} />
                 <footer className="report-footer">
                   <div>
                     <IconInfoCircle size={15} />

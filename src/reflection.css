@@ -1,4 +1,4 @@
-.reflection-workspace { margin-bottom: 24px; min-width: 0; scroll-margin-top: 24px; }
+.reflection-workspace { margin-top: 24px; min-width: 0; scroll-margin-top: 24px; }
 .reflection-heading { gap: 20px; align-items: center; }
 .reflection-heading p { margin: 9px 0 0; color: var(--muted); font-size: 12px; }
 .reflection-actions { flex-shrink: 0; }

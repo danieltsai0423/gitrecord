@@ -20,7 +20,7 @@ GitRecord turns saved GitHub commit statistics into daily trends, repository bre
 
 **No GitHub CLI installation, manually entered token, or custom GitHub App is needed for normal use.**
 
-![GitRecord dark dashboard with account and project names redacted](docs/images/dashboard-dark-en.png)
+![GitRecord dark overview showing code-change trends and annual activity, with account and project names redacted](docs/images/dashboard-dark-en.png)
 
 *Screenshots use synthetic demo data. Every account and project name is masked before capture, including public repository names.*
 
@@ -105,7 +105,7 @@ GitHub authorization and App installation are separate steps. Each account needs
 
 ## Review your work
 
-The **Review & rhythm** workspace follows the global account and date filters. Period review and account comparison also follow the repository filter.
+Find **Review & rhythm** below **Daily report**, or use the last item in the sidebar to jump there. The workspace follows the global account and date filters. Period review and account comparison also follow the repository filter.
 
 ### Period review
 
@@ -148,7 +148,7 @@ Recaps use the dates available in the saved report, including a 365-day review; 
 
 ### Light theme and Traditional Chinese
 
-![Traditional Chinese light dashboard with account and project names redacted](docs/images/dashboard-light-zh-TW.png)
+![Traditional Chinese light overview showing code-change trends and annual activity, with account and project names redacted](docs/images/dashboard-light-zh-TW.png)
 
 ### Account management
 

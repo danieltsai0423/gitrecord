@@ -6,6 +6,12 @@ Every account and project label is replaced with an opaque mask before capture,
 including public project names. The capture script rejects unmasked labels,
 unexpected API requests, page errors, and page overflow.
 
+The English dark and Traditional Chinese light overview images show the page
+from its header through the full code-change trend and annual activity heatmap.
+Their height follows the heatmap's bottom edge rather than a fixed viewport.
+Review & rhythm appears below the daily report and last in the sidebar; its
+review, account-comparison, and goals images are captured separately.
+
 Regenerate on Windows with Microsoft Edge installed:
 
 ```powershell

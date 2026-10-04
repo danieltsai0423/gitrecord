@@ -1,6 +1,6 @@
 import { chromium } from "@playwright/test";
 import { createServer } from "node:http";
-import { access, mkdir, readFile } from "node:fs/promises";
+import { access, mkdir, readFile, rename, rm, writeFile } from "node:fs/promises";
 import { fileURLToPath } from "node:url";
 import { resolve, extname, sep } from "node:path";
 import { aggregateCommits, normalizeStore, updateAccount, dateRange } from "../dist-server/shared/report.js";
@@ -69,8 +69,8 @@ let browser;
 try {
   browser = await chromium.launch({ channel: "msedge" });
   const shots = [
-    { file: "dashboard-dark-en.png", language: "en", theme: "dark" },
-    { file: "dashboard-light-zh-TW.png", language: "zh-Hant", theme: "light" },
+    { file: "dashboard-dark-en.png", language: "en", theme: "dark", overview: true },
+    { file: "dashboard-light-zh-TW.png", language: "zh-Hant", theme: "light", overview: true },
     { file: "activity-dark-en.png", language: "en", theme: "dark", crop: "activity" },
     { file: "comparison-dark-en.png", language: "en", theme: "dark", tab: 1, crop: "workspace" },
     { file: "review-light-zh-TW.png", language: "zh-Hant", theme: "light", crop: "workspace" },
@@ -130,9 +130,28 @@ try {
       return count;
     }, [...identifiers]);
     if (!masks || errors.length) throw new Error(`Screenshot validation failed: ${shot.file}`);
+    if (shot.overview) {
+      // Keep both visualizations complete, with the daily report below the crop.
+      await page.evaluate(() => scrollTo(0, 0));
+      const heatmap = await page.locator("#activity").boundingBox();
+      if (!heatmap) throw new Error("Overview heatmap is missing");
+      await page.setViewportSize({ width: 1440, height: Math.ceil(heatmap.y + heatmap.height + 16) });
+      for (const selector of [".trend-panel", "#activity"]) {
+        const bounds = await page.locator(selector).boundingBox();
+        if (!bounds || bounds.y < 0 || bounds.y + bounds.height > page.viewportSize().height) throw new Error(`Overview crops ${selector}`);
+      }
+    }
     if (await page.evaluate(() => document.documentElement.scrollWidth > innerWidth)) throw new Error("Page overflow");
-    if (shot.crop) await page.locator(shot.crop === "accounts" ? ".account-panel" : shot.crop === "activity" ? ".charts-row" : "#reflection").screenshot({ path: resolve(output, shot.file) });
-    else { await page.evaluate(() => scrollTo(0, 0)); await page.screenshot({ path: resolve(output, shot.file) }); }
+    await page.evaluate(() => scrollTo(0, 0));
+    const frame = shot.crop
+      ? await page.locator(shot.crop === "accounts" ? ".account-panel" : shot.crop === "activity" ? ".charts-row" : "#reflection").screenshot()
+      : await page.screenshot();
+    // Replace completed images atomically, without truncating an existing PNG.
+    const file = resolve(output, shot.file), temporary = `${file}.tmp`;
+    try {
+      await writeFile(temporary, frame);
+      await rename(temporary, file);
+    } finally { await rm(temporary, { force: true }); }
     console.log(JSON.stringify({ file: shot.file, masks, errors }));
     await context.close();
   }
