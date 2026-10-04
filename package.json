@@ -17,6 +17,7 @@
     "validate": "npm run test && npm run build && npm run test:e2e"
   },
   "dependencies": {
+    "@napi-rs/keyring": "2.1.0",
     "@tabler/icons-react": "^3.48.0",
     "express": "^5.2.1",
     "react": "^19.3.0",

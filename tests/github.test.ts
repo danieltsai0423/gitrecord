@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { COMMITS_QUERY, syncGithub, type Query } from "../server/github.js";
+import { COMMITS_QUERY, createGithubQuery, syncGithub, type Query } from "../server/github.js";
 
 const repo = (name: string, isFork = false) => ({
   name,
@@ -10,6 +10,30 @@ const repo = (name: string, isFork = false) => ({
   isFork,
   primaryLanguage: null,
   defaultBranchRef: { name: "main", target: { oid: `head-${name}` } },
+});
+
+test("直接 GraphQL 傳送 Bearer token 與 variables，錯誤不輸出 token 或原始回應", async () => {
+  const calls: RequestInit[] = [];
+  const query = createGithubQuery(async () => "PRIVATE-TOKEN", async (url, options) => {
+    assert.equal(url, "https://api.github.com/graphql");
+    calls.push(options!);
+    return Response.json({ data: { count: 3 } });
+  });
+  assert.deepEqual(await query("query Count", { cursor: "next" }), { count: 3 });
+  assert.equal(new Headers(calls[0].headers).get("Authorization"), "Bearer PRIVATE-TOKEN");
+  assert.deepEqual(JSON.parse(String(calls[0].body)), { query: "query Count", variables: { cursor: "next" } });
+  assert.equal(calls[0].redirect, "error");
+  for (const status of [401, 403, 429]) {
+    const failure = createGithubQuery(async () => "PRIVATE-TOKEN", async () => Response.json({ message: "PRIVATE-TOKEN", errors: [{ message: "SECRET" }] }, { status }));
+    await assert.rejects(() => failure("query", {}), (error: Error) => !/PRIVATE-TOKEN|SECRET/.test(error.message));
+  }
+});
+
+test("GraphQL 回應過大或 JSON 無效時安全中止", async () => {
+  const large = createGithubQuery(async () => "PRIVATE-TOKEN", async () => new Response("x".repeat(8 * 1024 * 1024 + 1)));
+  await assert.rejects(() => large("query", {}), /回應過大/);
+  const invalid = createGithubQuery(async () => "PRIVATE-TOKEN", async () => new Response("SECRET"));
+  await assert.rejects(() => invalid("query", {}), /無效資料/);
 });
 const viewer = (nodes: unknown[], cursor: string | null = null) => ({
   viewer: {
@@ -24,6 +48,7 @@ const viewer = (nodes: unknown[], cursor: string | null = null) => ({
   },
 });
 const history = (nodes: unknown[], cursor: string | null = null) => ({
+  viewer: { id: "USER" },
   repository: {
     object: {
       history: {
@@ -32,6 +57,14 @@ const history = (nodes: unknown[], cursor: string | null = null) => ({
       },
     },
   },
+});
+
+test("同步途中切換帳號會中止整份報告，不保存混合帳號的資料", async () => {
+  const query: Query = async <T>(text: string) => {
+    if (text.includes("query Repositories")) return viewer([repo("alpha")]) as T;
+    return { ...history([commit]), viewer: { id: "OTHER" } } as T;
+  };
+  await assert.rejects(() => syncGithub(query, undefined, now), /帳號變更/);
 });
 const commit = {
   oid: "one",
@@ -128,4 +161,32 @@ test("全域失敗向外拋出，不產生看似成功的空報告", async () =>
     () => syncGithub(query, undefined, now),
     /所有 repositories 同步失敗/,
   );
+});
+
+test("安裝白名單分批查詢，不列出所有公開 repos，仍依作者與固定 HEAD 統計", async () => {
+  const ids = Array.from({ length: 51 }, (_, i) => `R_${i}`);
+  const batches: string[][] = [];
+  const query: Query = async <T>(text: string, vars: Record<string, unknown>) => {
+    if (text.includes("query SelectedRepositories")) {
+      assert.doesNotMatch(text, /repositories\(first/);
+      const selected = vars.ids as string[]; batches.push(selected);
+      return { viewer: viewer([]).viewer, nodes: selected.map((id) => ({ ...repo(id), owner: { login: "example" } })) } as T;
+    }
+    assert.equal(vars.author, "USER");
+    assert.equal(vars.head, `head-${vars.name}`);
+    assert.ok(ids.includes(String(vars.name)));
+    return history([commit]) as T;
+  };
+  const report = await syncGithub(query, undefined, now, [...ids, ids[0]]);
+  assert.deepEqual(batches.map((batch) => batch.length), [50, 1]);
+  assert.deepEqual(batches.flat(), ids);
+  assert.equal(report.repositories.length, 51);
+  assert.ok(report.repositories.every((entry) => entry.daily.reduce((sum, day) => sum + day.commits, 0) === 1));
+});
+
+test("被移除的 repo 或其他帳號的白名單資料使同步失敗", async () => {
+  for (const node of [null, { ...repo("other"), owner: { login: "different" } }]) {
+    const query: Query = async <T>() => ({ viewer: viewer([]).viewer, nodes: [node] }) as T;
+    await assert.rejects(() => syncGithub(query, undefined, now, ["R_ALLOWED"]));
+  }
 });

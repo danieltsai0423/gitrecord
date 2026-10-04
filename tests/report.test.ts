@@ -2,10 +2,15 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import {
   aggregateCommits,
+  accountFailure,
+  combineReports,
+  coverageFor,
   dailyCsv,
   dateRange,
   shiftDate,
   taipeiDate,
+  normalizeStore,
+  updateAccount,
   viewReport,
   type CommitStat,
   type Report,
@@ -23,6 +28,74 @@ const commit = (
   additions,
   deletions,
   parents: { totalCount: parents },
+});
+
+function otherSample(): Report {
+  const report = sample();
+  report.user = { id: "OTHER", login: "other", avatarUrl: "", url: "https://github.com/other" };
+  report.repositories = report.repositories.map((repo) => ({ ...repo, fullName: `other/${repo.name}` }));
+  return report;
+}
+
+test("舊快取轉換、多帳號合計、活躍日期去重與同名 repo 篩選", () => {
+  const old = sample();
+  const store = updateAccount(normalizeStore(old), otherSample());
+  assert.equal(store.accounts.length, 2);
+  const report = combineReports(store)!;
+  const view = viewReport(report, "2026-10-01", "2026-10-02");
+  assert.equal(view.totals.additions, 60);
+  assert.equal(view.totals.deletions, 6);
+  assert.equal(view.totals.commits, 4);
+  assert.equal(view.totals.activeDays, 1);
+  assert.equal(viewReport(report, "2026-10-02", "2026-10-02", "other/alpha").totals.additions, 10);
+  assert.equal(viewReport(combineReports(store, "other")!, "2026-10-01", "2026-10-02").totals.additions, 30);
+  assert.equal(combineReports(store, "unknown"), null);
+  assert.match(dailyCsv(report, "2026-10-01", "2026-10-02"), /example; other/);
+  const scopedCsv = dailyCsv(report, "2026-10-02", "2026-10-02", "other/alpha");
+  assert.match(scopedCsv, /"other","other\/alpha",10,1/);
+  assert.doesNotMatch(scopedCsv, /example=/);
+  assert.throws(() => normalizeStore({ version: 2, accounts: [old] }), /快取格式無效/);
+});
+
+test("再同步取代單一帳號、保留其他帳號；帳號更名依 GitHub ID 更新", () => {
+  const first = sample();
+  first.user.id = "FIRST";
+  const store = updateAccount(normalizeStore(first), otherSample());
+  const renamed = { ...first, user: { ...first.user, login: "renamed" } };
+  const next = updateAccount(store, renamed);
+  assert.equal(next.accounts.length, 2);
+  assert.equal(next.accounts.find((a) => a.report.user.id === "FIRST")?.report.user.login, "renamed");
+  assert.deepEqual(next.accounts.find((a) => a.report.user.id === "OTHER"), store.accounts.find((a) => a.report.user.id === "OTHER"));
+  assert.equal(viewReport(combineReports(next)!, "2026-10-01", "2026-10-02").totals.additions, 60);
+  const legacy = updateAccount(normalizeStore(sample()), first);
+  assert.equal(legacy.accounts.length, 1);
+  assert.equal(legacy.accounts[0].report.user.id, "FIRST");
+});
+
+test("不同同步日期與失敗帳號明示 partial，舊資料保留且可恢復", () => {
+  const older = sample();
+  older.range.end = "2026-10-01";
+  older.repositories.forEach((repo) => { repo.daily = repo.daily.filter((day) => day.date <= older.range.end); });
+  let store = updateAccount(normalizeStore(older), otherSample());
+  const merged = combineReports(store)!;
+  assert.equal(coverageFor(merged, "2026-10-01", "2026-10-02").partial, true);
+  assert.equal(coverageFor(merged, "2026-10-01", "2026-10-02", "other/alpha").partial, false);
+  assert.match(dailyCsv(merged, "2026-10-01", "2026-10-02"), /"partial"/);
+  store = accountFailure(store, otherSample().user, "網路失敗", "2026-10-03T01:00:00Z");
+  assert.equal(store.accounts.find((a) => a.report.user.login === "other")?.syncError, "網路失敗");
+  assert.equal(viewReport(combineReports(store, "other")!, "2026-10-01", "2026-10-02").totals.additions, 30);
+  assert.match(dailyCsv(combineReports(store, "other")!, "2026-10-01", "2026-10-02"), /other: 網路失敗/);
+  store = updateAccount(store, otherSample());
+  assert.equal(combineReports(store, "other")?.partial, false);
+});
+
+test("多年未同步帳號不使合計期間超過一年，也不偽裝完整涵蓋", () => {
+  const ancient = sample();
+  ancient.range = { start: "2020-10-01", end: "2020-10-02", until: "2020-10-02T06:00:00Z" };
+  ancient.repositories = [];
+  const report = combineReports(updateAccount(normalizeStore(ancient), otherSample()))!;
+  assert.equal(dateRange(report.range.start, report.range.end).length, 365);
+  assert.equal(coverageFor(report, report.range.start, report.range.end).partial, true);
 });
 const sample = (): Report => ({
   version: 1,

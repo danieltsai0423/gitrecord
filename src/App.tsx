@@ -1,4 +1,4 @@
-import { lazy, Suspense, useMemo, useState } from "react";
+import { lazy, Suspense, useEffect, useMemo, useRef, useState } from "react";
 import {
   IconArrowDown,
   IconArrowUp,
@@ -18,17 +18,19 @@ import {
   IconActivity,
   IconInfoCircle,
   IconChevronDown,
+  IconSun,
+  IconMoon,
 } from "@tabler/icons-react";
-import { dailyCsv, shiftDate, viewReport } from "../shared/report";
+import { combineReports, coverageFor, dailyCsv, shiftDate, viewReport } from "../shared/report";
 import { useReport } from "./useReport";
+import { useAuth } from "./useAuth";
 import { Heatmap } from "./components/Heatmap";
 import { RepositoryList } from "./components/RepositoryList";
+import { AccountPanel } from "./components/AccountPanel";
+import { CoverageNotice } from "./components/CoverageNotice";
+import { readTheme, saveTheme } from "./theme";
+import { useLanguage } from "./i18n";
 
-const number = (value: number) => value.toLocaleString("zh-TW");
-const signed = (value: number) =>
-  `${value < 0 ? "−" : "+"}${number(Math.abs(value))}`;
-const shortDate = (date: string) =>
-  `${Number(date.slice(5, 7))}月${Number(date.slice(8))}日`;
 const TrendChart = lazy(() =>
   import("./components/TrendChart").then((module) => ({
     default: module.TrendChart,
@@ -36,7 +38,46 @@ const TrendChart = lazy(() =>
 );
 
 export default function App() {
-  const { report, loading, status, error, sync } = useReport();
+  const { language, locale, t, number, shortDate, syncTime, message, toggleLanguage } = useLanguage();
+  const signed = (value: number) => `${value < 0 ? "−" : "+"}${number(Math.abs(value))}`;
+  const [theme, setTheme] = useState(readTheme);
+  const themeLabel = t(theme === "dark" ? "切換為淺色模式" : "切換為深色模式");
+  const toggleTheme = () => {
+    const next = theme === "dark" ? "light" : "dark";
+    saveTheme(next);
+    setTheme(next);
+  };
+  const { store, loading, status, error, sync } = useReport();
+  const auth = useAuth();
+  const initialSync = useRef(false);
+  const syncedAuthVersion = useRef(0);
+  const activeLogin = auth.status.accounts.find((entry) => entry.active)?.login;
+  const authBusy = auth.loading || auth.status.running;
+  const connectionReady = auth.status.installation?.state === "ready";
+  useEffect(() => {
+    if (auth.connectedVersion > syncedAuthVersion.current) {
+      syncedAuthVersion.current = auth.connectedVersion;
+      initialSync.current = true;
+      void sync();
+    }
+  }, [auth.connectedVersion, sync]);
+  useEffect(() => {
+    if (!loading && !authBusy && activeLogin && connectionReady && !store?.accounts.length &&
+      !status.running && !error && !initialSync.current) {
+      initialSync.current = true;
+      void sync();
+    }
+  }, [loading, authBusy, activeLogin, connectionReady, store, status.running, error, sync]);
+  const [account, setAccount] = useState("all");
+  const selectedAccount = store?.accounts.some((entry) => entry.report.user.login === account) ? account : "all";
+  const report = useMemo(() => store ? combineReports(store, selectedAccount) : null, [store, selectedAccount]);
+  const user = report?.accounts.length === 1 ? report.accounts[0].report.user : null;
+  const profileLogin = selectedAccount !== "all" ? selectedAccount : activeLogin ?? user?.login;
+  const profileUrl = profileLogin ? `https://github.com/${encodeURIComponent(profileLogin)}` : "https://github.com";
+  const profileLabel = profileLogin
+    ? `${t("開啟 {login} 的 GitHub 個人頁", { login: profileLogin })}${selectedAccount === "all" && activeLogin ? t("（目前授權帳號）") : ""}`
+    : t("開啟 GitHub");
+  const accountLabel = report?.accounts.map((entry) => entry.report.user.login).join(" + ") ?? t("GitHub 帳號");
   const [period, setPeriod] = useState(30);
   const [customStart, setCustomStart] = useState("");
   const [customEnd, setCustomEnd] = useState("");
@@ -66,6 +107,8 @@ export default function App() {
     () => (report ? viewReport(report, start, end, selectedRepo) : null),
     [report, start, end, selectedRepo],
   );
+  const coverage = report ? coverageFor(report, start, end, selectedRepo) : null;
+  const missingCoverage = coverage?.accounts.filter(({ report }) => start < report.range.start || end > report.range.end) ?? [];
   const annual = useMemo(
     () =>
       report
@@ -78,6 +121,8 @@ export default function App() {
     const previousStart = shiftDate(start, -view.daily.length),
       previousEnd = shiftDate(start, -1);
     if (previousStart < report.range.start) return null;
+    if (coverageFor(report, start, end, selectedRepo).partial ||
+      coverageFor(report, previousStart, previousEnd, selectedRepo).partial) return null;
     return viewReport(report, previousStart, previousEnd, selectedRepo).totals;
   }, [report, view, start, selectedRepo]);
   const failedRepos =
@@ -114,12 +159,12 @@ export default function App() {
   };
   const delta = (value: number, previous: number | undefined) =>
     previous === undefined
-      ? "無前期資料"
+      ? t("無前期資料")
       : previous === 0
         ? value === 0
-          ? "與前期相同"
-          : "前期無活動"
-        : `${value >= previous ? "+" : "−"}${Math.abs(((value - previous) / previous) * 100).toFixed(1)}% 較前期`;
+          ? t("與前期相同")
+          : t("前期無活動")
+        : t("{value}% 較前期", { value: `${value >= previous ? "+" : "−"}${Math.abs(((value - previous) / previous) * 100).toFixed(1)}` });
   const displayDays = [...(view?.daily ?? [])].reverse();
   const shownDays = showAllDays ? displayDays : displayDays.slice(0, 10);
 
@@ -144,17 +189,17 @@ export default function App() {
         <div className="workspace">
           <IconBrandGithub size={19} />
           <div>
-            <strong>個人工作空間</strong>
+            <strong>{t("個人工作空間")}</strong>
             <span>GitHub Analytics</span>
           </div>
         </div>
-        <div className="nav-label">工作空間</div>
-        <nav aria-label="Dashboard 導覽">
+        <div className="nav-label">{t("工作空間")}</div>
+        <nav aria-label={t("Dashboard 導覽")}>
           {[
-            ["overview", "總覽", IconLayoutDashboard],
-            ["activity", "活動紀錄", IconActivity],
+            ["overview", t("總覽"), IconLayoutDashboard],
+            ["activity", t("活動紀錄"), IconActivity],
             ["repositories", "Repositories", IconGitBranch],
-            ["daily", "每日報告", IconChartLine],
+            ["daily", t("每日報告"), IconChartLine],
           ].map(([id, label, Glyph]) => {
             const Icon = Glyph as typeof IconActivity;
             return (
@@ -173,17 +218,17 @@ export default function App() {
           <span className="note-icon">
             <IconInfoCircle size={17} />
           </span>
-          <strong>資料來自你的 GitHub</strong>
-          <p>私人 repo 也能統計。資料保留在這台電腦，透過 CLI 安全同步。</p>
+          <strong>{t("資料來自你的 GitHub")}</strong>
+          <p>{t("透過 GitHub 授權同步，支援私人 repo。統計資料保留在這台電腦。")}</p>
           <span className="local-badge">
             <span />
-            本機資料
+            {t("本機資料")}
           </span>
         </div>
         <div className="sidebar-user">
-          {report?.user.avatarUrl ? (
+          {user?.avatarUrl ? (
             <img
-              src={report.user.avatarUrl}
+              src={user.avatarUrl}
               alt=""
               referrerPolicy="no-referrer"
             />
@@ -193,17 +238,9 @@ export default function App() {
             </span>
           )}
           <div>
-            <strong>{report?.user.login ?? "GitHub 帳號"}</strong>
-            <span>個人帳號</span>
+            <strong title={user?.login}>{user?.login ?? t(report ? "所有帳號合計" : "GitHub 帳號")}</strong>
+            <span>{report ? t("{count} 個帳號的統計", { count: report.accounts.length }) : t("個人帳號")}</span>
           </div>
-          <a
-            href={report?.user.url ?? "https://github.com"}
-            target="_blank"
-            rel="noreferrer"
-            aria-label="開啟 GitHub 個人頁"
-          >
-            <IconBrandGithub size={18} />
-          </a>
         </div>
       </aside>
       <main className="main-content" id="overview">
@@ -214,8 +251,8 @@ export default function App() {
               GitRecord.
             </span>
             <span className="breadcrumb">
-              工作空間<span>/</span>
-              <strong>總覽</strong>
+              {t("工作空間")}<span>/</span>
+              <strong>{t("總覽")}</strong>
             </span>
           </div>
           <div className="topbar-right">
@@ -223,11 +260,32 @@ export default function App() {
               <IconCalendar size={14} />
               Asia/Taipei
             </span>
+            <button
+              type="button"
+              className="language-toggle"
+              onClick={toggleLanguage}
+              aria-label={language === "en" ? "切換為繁體中文" : "Switch to English"}
+              title={language === "en" ? "切換為繁體中文" : "Switch to English"}
+              lang={language === "en" ? "zh-Hant" : "en"}
+            >
+              {language === "en" ? "中" : "EN"}
+            </button>
+            <button
+              type="button"
+              className="theme-toggle"
+              onClick={toggleTheme}
+              aria-label={themeLabel}
+              title={themeLabel}
+            >
+              {theme === "dark" ? <IconSun size={20} /> : <IconMoon size={20} />}
+            </button>
             <a
-              href={report?.user.url ?? "https://github.com"}
+              className="github-profile-link"
+              href={profileUrl}
               target="_blank"
-              rel="noreferrer"
-              aria-label="GitHub 個人頁"
+              rel="noopener noreferrer"
+              aria-label={profileLabel}
+              title={profileLabel}
             >
               <IconBrandGithub size={20} />
             </a>
@@ -238,9 +296,9 @@ export default function App() {
             <div>
               <div className="eyebrow">YOUR CODE, OVER TIME</div>
               <h1>
-                代碼的每一份進展<span className="heading-dot">.</span>
+                {t("代碼的每一份進展")}<span className="heading-dot">.</span>
               </h1>
-              <p>看見每天的新增、修整，以及持續累積的軌跡。</p>
+              <p>{t("看見每天的新增、修整，以及持續累積的軌跡。")}</p>
             </div>
             <div className="heading-actions no-print">
               <button
@@ -249,7 +307,7 @@ export default function App() {
                 onClick={() => window.print()}
               >
                 <IconPrinter size={16} />
-                列印
+                {t("列印")}
               </button>
               <button
                 className="button button-primary"
@@ -257,54 +315,61 @@ export default function App() {
                 onClick={csv}
               >
                 <IconDownload size={17} />
-                匯出 CSV
+                {t("匯出 CSV")}
               </button>
             </div>
           </div>
           <div className="print-context">
-            帳號：{report?.user.login} · 期間：{start} — {end} ·{" "}
-            {selectedRepo === "all" ? "全部 repositories" : selectedRepo} ·
+            {t("帳號：")}{coverage?.accounts.map((entry) => entry.report.user.login).join(" + ") ?? accountLabel} · {t("期間：")}{start} — {end} ·{" "}
+            {selectedRepo === "all" ? t("全部 repositories") : selectedRepo} ·
             Asia/Taipei
+            <div>{t(coverage?.partial ? "部分資料" : "完整資料")} · {t("各帳號資料時間：")}</div>
+            {coverage?.accounts.map((entry) => <div key={entry.report.user.login}>
+              {entry.report.user.login} · {syncTime(entry.report.generatedAt)} · {t("涵蓋")} {entry.report.range.start} — {entry.report.range.end}
+              {entry.report.partial ? ` · ${t("部分同步")}` : ""}{entry.syncError ? ` · ${t("同步失敗：")}${message(entry.syncError)}` : ""}
+            </div>)}
           </div>
+          <AccountPanel accounts={store?.accounts ?? []} auth={auth} syncRunning={status.running} />
           {error && (
             <div className="notice notice-error" role="alert">
               <IconAlertTriangle size={18} />
               <div>
-                <strong>同步未完成</strong>
+                <strong>{t("同步未完成")}</strong>
                 <span>
-                  {error}
-                  {report ? " 畫面仍顯示上次保存的資料。" : ""}
+                  {message(error)}
+                  {report ? t(" 畫面仍顯示上次保存的資料。") : ""}
                 </span>
               </div>
               <button
                 className="button button-quiet"
                 onClick={() => void sync()}
-                disabled={status.running}
+                disabled={status.running || authBusy || !activeLogin || !connectionReady}
               >
-                重試
+                {t("重試")}
               </button>
             </div>
           )}
-          {report?.partial && (
+          {failedRepos.length > 0 && (
             <div className="notice notice-warning" role="status">
               <IconAlertTriangle size={18} />
               <div>
                 <strong>
-                  部分資料 · {failedRepos.length} 個 repo 未完成同步
+                  {t("部分資料 · {count} 個 repo 未完成同步", { count: failedRepos.length })}
                 </strong>
                 <span>
                   {failedRepos
-                    .map((repo) => `${repo.name}：${repo.error}`)
-                    .join("；")}
+                    .map((repo) => `${repo.fullName}: ${message(repo.error)}`)
+                    .join("; ")}
                 </span>
               </div>
             </div>
           )}
+          {missingCoverage.length > 0 && <CoverageNotice accounts={missingCoverage} auth={auth} syncRunning={status.running} />}
           {status.running && (
             <div className="sync-progress" role="status">
               <IconRefresh size={16} className="spin" />
               <span>
-                正在同步 <strong>{status.current}</strong>
+                {t("正在同步")} <strong>{status.account ? `${status.account} / ` : ""}{message(status.current)}</strong>
               </span>
               <span>
                 {status.completed} / {status.total || "…"}
@@ -319,23 +384,24 @@ export default function App() {
               </span>
               <h2>
                 {loading
-                  ? "正在載入你的工作空間"
+                  ? t("正在載入你的工作空間")
                   : status.running
-                    ? "連接你的代碼軌跡"
-                    : "準備好查看你的 GitHub"}
+                    ? t("連接你的代碼軌跡")
+                    : t("準備好查看你的 GitHub")}
               </h2>
               <p>
                 {status.running
-                  ? "第一次同步會讀取近一年的 commit 統計，完成後就能查看完整報告。"
-                  : "在本機安裝 GitHub CLI 並登入，便能讀取公開與私人 repo 的統計。"}
+                  ? t("第一次同步會讀取近一年的 commit 統計，完成後就能查看完整報告。")
+                  : t("按上方「連接 GitHub 帳號」，完成授權並選擇 repositories 後便會自動同步，支援私人 repos。")}
               </p>
               {!loading && !status.running && (
                 <button
                   className="button button-primary"
                   onClick={() => void sync()}
+                  disabled={authBusy || !activeLogin || !connectionReady}
                 >
                   <IconRefresh size={16} />
-                  同步 GitHub 資料
+                  {t("同步 GitHub 資料")}
                 </button>
               )}
             </div>
@@ -344,7 +410,19 @@ export default function App() {
             annual && (
               <>
                 <div className="filterbar no-print">
-                  <div className="period-switch" aria-label="統計期間">
+                  <div className="repo-select account-select">
+                    <IconBrandGithub size={16} />
+                    <label htmlFor="account-filter">{t("統計帳號")}</label>
+                    <select id="account-filter" aria-label={t("篩選帳號")} value={selectedAccount} onChange={(e) => {
+                      setAccount(e.target.value);
+                      setRepository("all");
+                      setShowAllDays(false);
+                    }}>
+                      <option value="all">{t("所有帳號合計")}</option>
+                      {store?.accounts.map((entry) => <option value={entry.report.user.login} key={entry.report.user.login}>{entry.report.user.login}</option>)}
+                    </select>
+                  </div>
+                  <div className="period-switch" aria-label={t("統計期間")}>
                     {[7, 30, 90, 365].map((days) => (
                       <button
                         key={days}
@@ -355,14 +433,14 @@ export default function App() {
                           setShowAllDays(false);
                         }}
                       >
-                        {days === 365 ? "一年" : `${days} 天`}
+                        {days === 365 ? t("一年") : t("{count} 天", { count: days })}
                       </button>
                     ))}
                   </div>
                   <div className="date-fields">
                     <IconCalendar size={15} />
                     <label className="sr-only" htmlFor="start-date">
-                      開始日期
+                      {t("開始日期")}
                     </label>
                     <input
                       id="start-date"
@@ -384,7 +462,7 @@ export default function App() {
                     />
                     <span>—</span>
                     <label className="sr-only" htmlFor="end-date">
-                      結束日期
+                      {t("結束日期")}
                     </label>
                     <input
                       id="end-date"
@@ -408,18 +486,18 @@ export default function App() {
                   <div className="repo-select">
                     <IconGitBranch size={16} />
                     <label className="sr-only" htmlFor="repository-filter">
-                      篩選 Repository
+                      {t("篩選 Repository")}
                     </label>
                     <select
                       id="repository-filter"
                       value={selectedRepo}
                       onChange={(e) => setRepository(e.target.value)}
                     >
-                      <option value="all">全部 repositories</option>
+                      <option value="all">{t("全部 repositories")}</option>
                       {report.repositories.map((repo) => (
                         <option value={repo.fullName} key={repo.fullName}>
-                          {repo.name}
-                          {repo.status === "error" ? "（同步失敗）" : ""}
+                          {report.accounts.length > 1 ? repo.fullName : repo.name}
+                          {repo.status === "error" ? t("（同步失敗）") : ""}
                         </option>
                       ))}
                     </select>
@@ -427,39 +505,32 @@ export default function App() {
                   <button
                     className="sync-button"
                     onClick={() => void sync()}
-                    disabled={status.running}
-                    aria-label="同步 GitHub 資料"
+                    disabled={status.running || authBusy || !activeLogin || !connectionReady}
+                    aria-label={t("同步 GitHub 資料")}
+                    title={t("同步目前授權帳號 {login}，保留其他帳號的資料", { login: activeLogin ?? t("（尚未登入）") })}
                   >
                     <IconRefresh
                       size={17}
                       className={status.running ? "spin" : ""}
                     />
-                    <span>同步</span>
+                    <span>{t("同步目前帳號")}</span>
                   </button>
                 </div>
                 <div className="range-caption">
                   <span>
                     {shortDate(start)} — {shortDate(end)}{" "}
                     <span className="caption-separator">/</span>{" "}
-                    {view.daily.length} 天的代碼活動
+                    {t("{count} 天的代碼活動", { count: view.daily.length })}
                   </span>
                   <span className="sync-time">
                     <IconCircleCheck size={13} />
-                    {report.partial ? "部分同步" : "已同步"} ·{" "}
-                    {new Date(report.generatedAt).toLocaleString("zh-TW", {
-                      timeZone: "Asia/Taipei",
-                      month: "2-digit",
-                      day: "2-digit",
-                      hour: "2-digit",
-                      minute: "2-digit",
-                      hour12: false,
-                    })}
+                    {t(coverage?.partial ? "部分資料" : "已同步")} · {t("最近更新")} {syncTime(report.generatedAt, false)}
                   </span>
                 </div>
-                <section className="stats-grid" aria-label="期間統計摘要">
+                <section className="stats-grid" aria-label={t("期間統計摘要")}>
                   {[
                     {
-                      label: "新增行數",
+                      label: t("新增行數"),
                       value: `+${number(view.totals.additions)}`,
                       color: "positive",
                       Icon: IconArrowUp,
@@ -470,7 +541,7 @@ export default function App() {
                       note: "ADDITIONS",
                     },
                     {
-                      label: "刪除行數",
+                      label: t("刪除行數"),
                       value: `−${number(view.totals.deletions)}`,
                       color: "negative",
                       Icon: IconArrowDown,
@@ -481,11 +552,11 @@ export default function App() {
                       note: "DELETIONS",
                     },
                     {
-                      label: "淨增行數",
+                      label: t("淨增行數"),
                       value: signed(view.totals.net),
                       color: "",
                       Icon: IconArrowsDiff,
-                      small: `${number(view.totals.changed)} 行總變更`,
+                      small: t("{count} 行總變更", { count: number(view.totals.changed) }),
                       note: "NET CHANGE",
                     },
                     {
@@ -493,7 +564,7 @@ export default function App() {
                       value: number(view.totals.commits),
                       color: "",
                       Icon: IconGitCommit,
-                      small: `${view.totals.activeDays} 個活躍日 / ${view.daily.length} 天`,
+                      small: t("{active} 個活躍日 / {days} 天", { active: view.totals.activeDays, days: view.daily.length }),
                       note: "COMMITS",
                     },
                   ].map((metric) => (
@@ -524,46 +595,47 @@ export default function App() {
                     <div className="panel-heading">
                       <div>
                         <span className="eyebrow">CODE CHANGES</span>
-                        <h2>代碼變更趨勢</h2>
+                        <h2>{t("代碼變更趨勢")}</h2>
                       </div>
                       <div className="chart-legend">
                         <span>
                           <i className="legend-dot green" />
-                          新增
+                          {t("新增")}
                         </span>
                         <span>
                           <i className="legend-dot coral" />
-                          刪除
+                          {t("刪除")}
                         </span>
                       </div>
                     </div>
                     <div className="trend-summary">
                       <strong>
                         {number(view.totals.changed)}
-                        <span>行變更</span>
+                        <span>{t("行變更")}</span>
                       </strong>
                       <span>
                         {view.totals.commits
-                          ? `最高活動日 ${shortDate(view.peak.date)} · ${number(view.peak.changed)} 行`
-                          : "這段期間沒有 commit 活動"}
+                          ? t("最高活動日 {date} · {count} 行", { date: shortDate(view.peak.date), count: number(view.peak.changed) })
+                          : t("這段期間沒有 commit 活動")}
                       </span>
                     </div>
                     <Suspense
                       fallback={
                         <div className="trend-chart chart-loading">
-                          載入趨勢圖…
+                          {t("載入趨勢圖…")}
                         </div>
                       }
                     >
                       <TrendChart days={view.daily} />
                     </Suspense>
                     <div className="panel-footnote">
-                      每日統計 · 包含全部文字檔案的新增與刪除
+                      {t("每日統計 · 包含全部文字檔案的新增與刪除")}
                     </div>
                   </section>
                   <RepositoryList
                     repositories={view.repositories}
                     onSelect={setRepository}
+                    showOwner={report.accounts.length > 1}
                   />
                 </div>
                 <Heatmap
@@ -576,23 +648,23 @@ export default function App() {
                   <div className="panel-heading">
                     <div>
                       <span className="eyebrow">DAILY BREAKDOWN</span>
-                      <h2>把每一天攤開來看</h2>
+                      <h2>{t("把每一天攤開來看")}</h2>
                     </div>
-                    <span className="quiet-chip">{view.daily.length} 天</span>
+                    <span className="quiet-chip">{t("{count} 天", { count: view.daily.length })}</span>
                   </div>
                   <div className="table-scroll">
                     <table>
                       <caption className="sr-only">
-                        每日新增、刪除、淨增、變更及 commit 數量
+                        {t("每日新增、刪除、淨增、變更及 commit 數量")}
                       </caption>
                       <thead>
                         <tr>
-                          <th>日期</th>
-                          <th>新增行數</th>
-                          <th>刪除行數</th>
-                          <th>淨增行數</th>
+                          <th>{t("日期")}</th>
+                          <th>{t("新增行數")}</th>
+                          <th>{t("刪除行數")}</th>
+                          <th>{t("淨增行數")}</th>
                           <th>Commits</th>
-                          <th>變更比例</th>
+                          <th>{t("變更比例")}</th>
                         </tr>
                       </thead>
                       <tbody>
@@ -608,7 +680,7 @@ export default function App() {
                               <span className="day-name">
                                 {new Date(
                                   `${day.date}T00:00:00+08:00`,
-                                ).toLocaleDateString("zh-TW", {
+                                ).toLocaleDateString(locale, {
                                   timeZone: "Asia/Taipei",
                                   weekday: "short",
                                 })}
@@ -631,7 +703,7 @@ export default function App() {
                             <td>
                               <div
                                 className="daily-ratio"
-                                title={`${day.changed} 行變更`}
+                                title={t("{count} 行變更", { count: number(day.changed) })}
                               >
                                 {day.changed > 0 ? (
                                   <>
@@ -648,7 +720,7 @@ export default function App() {
                       </tbody>
                       <tfoot>
                         <tr>
-                          <td>期間合計</td>
+                          <td>{t("期間合計")}</td>
                           <td className="positive">
                             +{number(view.totals.additions)}
                           </td>
@@ -657,7 +729,7 @@ export default function App() {
                           </td>
                           <td>{signed(view.totals.net)}</td>
                           <td>{number(view.totals.commits)}</td>
-                          <td>{number(view.totals.changed)} 行</td>
+                          <td>{t("{count} 行", { count: number(view.totals.changed) })}</td>
                         </tr>
                       </tfoot>
                     </table>
@@ -665,10 +737,10 @@ export default function App() {
                   {displayDays.length > 10 && (
                     <div className="table-footer no-print">
                       <span>
-                        顯示 {shownDays.length} / {displayDays.length} 天
+                        {t("顯示 {shown} / {total} 天", { shown: shownDays.length, total: displayDays.length })}
                       </span>
                       <button onClick={() => setShowAllDays(!showAllDays)}>
-                        {showAllDays ? "收合明細" : "查看全部日期"}
+                        {t(showAllDays ? "收合明細" : "查看全部日期")}
                         <IconChevronDown
                           size={14}
                           className={showAllDays ? "rotated" : ""}
@@ -681,11 +753,8 @@ export default function App() {
                   <div>
                     <IconInfoCircle size={15} />
                     <p>
-                      統計你在各 repo <strong>預設分支</strong>上的提交，排除
-                      merge commits、fork 與其他作者。時間以 Asia/Taipei 計算。
-                      <br />共 {report.repositories.length} 個 repo · 排除{" "}
-                      {report.excludedForks} 個 fork ·
-                      行數包含所有文字檔案，未合併分支與未關聯帳號的作者不計入。
+                      {t("統計你在各 repo")} <strong>{t("預設分支")}</strong>{t("上的提交，排除 merge commits、fork 與其他作者。時間以 Asia/Taipei 計算。")}
+                      <br />{t("共 {repos} 個 repo · 排除 {forks} 個 fork · 行數包含所有文字檔案，未合併分支與未關聯帳號的作者不計入。", { repos: report.repositories.length, forks: report.excludedForks })}
                     </p>
                   </div>
                   <span>

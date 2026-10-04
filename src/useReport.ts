@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
-import type { Report, SyncStatus } from "../shared/report";
+import { normalizeStore, type ReportStore, type SyncStatus } from "../shared/report";
 
 const idle: SyncStatus = {
   running: false,
@@ -9,15 +9,15 @@ const idle: SyncStatus = {
   error: null,
 };
 
-async function readReport(signal?: AbortSignal): Promise<Report | null> {
+async function readReport(signal?: AbortSignal): Promise<ReportStore | null> {
   const response = await fetch("/api/report", { signal, cache: "no-store" });
   if (response.status === 404) return null;
   if (!response.ok) throw new Error("無法取得報告，請確認本機服務正在執行。");
-  return response.json();
+  return normalizeStore(await response.json());
 }
 
 export function useReport() {
-  const [report, setReport] = useState<Report | null>(null);
+  const [store, setReport] = useState<ReportStore | null>(null);
   const [status, setStatus] = useState<SyncStatus>(idle);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -55,7 +55,6 @@ export function useReport() {
         setReport(cached);
         setStatus(current);
         setError(current.error);
-        if (!cached && !current.running && !current.error) void sync();
       } catch (error) {
         if (!controller.signal.aborted)
           setError(error instanceof Error ? error.message : "無法載入報告");
@@ -100,5 +99,5 @@ export function useReport() {
     };
   }, [status.running]);
 
-  return { report, status, loading, error, sync };
+  return { store, status, loading, error, sync };
 }

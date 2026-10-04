@@ -1,5 +1,9 @@
 # Third-party notices
 
+OS credential storage uses `@napi-rs/keyring` under the MIT License. Source: https://github.com/Brooooooklyn/keyring-node
+
+Copyright (c) 2020 N-API for Rust. The MIT License text below applies to this dependency as well.
+
 UI icons use `@tabler/icons-react`. `public/favicon.svg` adapts the Tabler `chart-arcs` icon, retrieved with Better Icons. Source: https://github.com/tabler/tabler-icons
 
 MIT License

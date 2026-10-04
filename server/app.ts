@@ -1,23 +1,18 @@
 import express from "express";
 import { readFile, mkdir, writeFile, rename } from "node:fs/promises";
 import { resolve, dirname } from "node:path";
-import type { Report, SyncStatus } from "../shared/report.js";
+import {
+  accountFailure, normalizeStore, updateAccount,
+  type Report, type ReportStore, type SyncStatus,
+} from "../shared/report.js";
 import { syncGithub, type Progress } from "./github.js";
+import { AuthManager } from "./auth.js";
 
 export async function loadReport(
   path = resolve(".cache/report.json"),
-): Promise<Report | null> {
+): Promise<ReportStore | null> {
   try {
-    const report = JSON.parse(await readFile(path, "utf8")) as Report;
-    if (
-      report.version !== 1 ||
-      report.timezone !== "Asia/Taipei" ||
-      !Array.isArray(report.repositories)
-    )
-      throw new Error(
-        "快取格式無效；請將 .cache/report.json 移至備份位置後重新同步。",
-      );
-    return report;
+    return normalizeStore(JSON.parse(await readFile(path, "utf8")));
   } catch (error) {
     if ((error as NodeJS.ErrnoException).code === "ENOENT") return null;
     throw error;
@@ -25,7 +20,7 @@ export async function loadReport(
 }
 
 export async function saveReport(
-  report: Report,
+  report: ReportStore,
   path = resolve(".cache/report.json"),
 ): Promise<void> {
   await mkdir(dirname(path), { recursive: true });
@@ -38,22 +33,25 @@ export async function saveReport(
 }
 
 interface Options {
-  initialReport?: Report | null;
+  initialReport?: Report | ReportStore | null;
   sync?: (progress: Progress) => Promise<Report>;
-  save?: (report: Report) => Promise<void>;
+  save?: (report: ReportStore) => Promise<void>;
   staticDir?: string;
+  auth?: AuthManager;
 }
 
 export function createApp(options: Options = {}) {
   const app = express();
+  const auth = options.auth ?? new AuthManager();
   app.disable("x-powered-by");
-  let report = options.initialReport ?? null;
+  let report = options.initialReport ? normalizeStore(options.initialReport) : null;
   const status: SyncStatus = {
     running: false,
     completed: 0,
     total: 0,
     current: "",
     error: null,
+    account: null,
   };
   app.use((req, res, next) => {
     if (!/^(localhost|127\.0\.0\.1)(:\d+)?$/.test(req.headers.host ?? "")) {
@@ -89,9 +87,62 @@ export function createApp(options: Options = {}) {
     res.json(report);
   });
   app.get("/api/sync/status", (_req, res) => res.json(status));
+  app.get("/api/auth", async (req, res) => {
+    res.json(await auth.status(req.query.refresh === "true"));
+  });
+  app.post("/api/auth/login", (_req, res) => {
+    if (status.running || auth.running) {
+      res.status(409).json({ error: "同步或帳號操作正在進行，請完成後再新增帳號。" });
+      return;
+    }
+    auth.startLogin();
+    res.status(202).json(auth.snapshot);
+  });
+  app.post("/api/auth/cancel", (_req, res) => {
+    auth.cancelLogin();
+    res.status(202).json(auth.snapshot);
+  });
+  app.post("/api/auth/config", express.json({ limit: "1kb" }), async (req, res) => {
+    if (status.running || auth.running) {
+      res.status(409).json({ error: "同步或帳號操作已在進行中。" });
+      return;
+    }
+    try {
+      await auth.configure(req.body);
+      res.json(auth.snapshot);
+    } catch (error) {
+      res.status(400).json({ error: error instanceof Error ? error.message : "無效的 OAuth Client ID。" });
+    }
+  });
+  app.post("/api/auth/forget", express.json({ limit: "1kb" }), async (req, res) => {
+    if (status.running || auth.running) {
+      res.status(409).json({ error: "同步或帳號操作已在進行中。" });
+      return;
+    }
+    const login = req.body?.login;
+    if (typeof login !== "string" || !/^[a-zA-Z0-9][a-zA-Z0-9-]{0,38}$/.test(login)) {
+      res.status(400).json({ error: "無效的 GitHub 帳號。" });
+      return;
+    }
+    await auth.forgetAccount(login);
+    res.json(auth.snapshot);
+  });
+  app.post("/api/auth/switch", express.json({ limit: "1kb" }), async (req, res) => {
+    if (status.running || auth.running) {
+      res.status(409).json({ error: "同步或帳號操作正在進行，請完成後再切換帳號。" });
+      return;
+    }
+    const login = req.body?.login;
+    if (typeof login !== "string" || !/^[a-zA-Z0-9][a-zA-Z0-9-]{0,38}$/.test(login)) {
+      res.status(400).json({ error: "無效的 GitHub 帳號。" });
+      return;
+    }
+    await auth.switchAccount(login);
+    res.status(202).json(auth.snapshot);
+  });
   app.post("/api/sync", (_req, res) => {
-    if (status.running) {
-      res.status(409).json({ error: "同步已在進行中。" });
+    if (status.running || auth.running) {
+      res.status(409).json({ error: "同步或帳號操作已在進行中。" });
       return;
     }
     Object.assign(status, {
@@ -100,20 +151,44 @@ export function createApp(options: Options = {}) {
       total: 0,
       current: "準備同步",
       error: null,
+      account: null,
     });
     res.status(202).json(status);
     void (async () => {
+      let user: Report["user"] | undefined;
+      const attemptedAt = new Date().toISOString();
+      let syncing = true;
       try {
         const nextReport = await (
-          options.sync ?? ((progress) => syncGithub(undefined, progress))
-        )((completed, total, current) => {
-          Object.assign(status, { completed, total, current });
+          options.sync ?? (async (progress) => {
+            const source = await auth.source();
+            return syncGithub(source.query, progress, new Date(), source.repositoryIds);
+          })
+        )((completed, total, current, account) => {
+          if (account) user = account;
+          Object.assign(status, {
+            completed, total, current, account: user?.login ?? null,
+          });
         });
-        await (options.save ?? saveReport)(nextReport);
-        report = nextReport;
+        syncing = false;
+        const nextStore = updateAccount(
+          report ?? { version: 2, accounts: [] }, nextReport,
+        );
+        await (options.save ?? saveReport)(nextStore);
+        report = nextStore;
+        status.account = nextReport.user.login;
       } catch (error) {
         status.error =
           error instanceof Error ? error.message : "同步失敗，請重試。";
+        if (syncing && user && report) {
+          const failed = accountFailure(report, user, status.error, attemptedAt);
+          try {
+            await (options.save ?? saveReport)(failed);
+            report = failed;
+          } catch {
+            status.error += " 無法保存失敗狀態，原報告仍保留。";
+          }
+        }
       } finally {
         status.running = false;
       }

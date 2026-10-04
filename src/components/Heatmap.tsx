@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { shiftDate, type DailyStat } from "../../shared/report";
+import type { DailyStat } from "../../shared/report";
+import { useLanguage } from "../i18n";
 
 export function Heatmap({
   days,
@@ -12,6 +13,7 @@ export function Heatmap({
   end: string;
   onSelect: (date: string) => void;
 }) {
+  const { language, locale, t, number } = useLanguage();
   const [hoveredDate, setHoveredDate] = useState<string | null>(null);
   const hovered = days.find((day) => day.date === hoveredDate) ?? null;
   const scroller = useRef<HTMLDivElement>(null);
@@ -50,10 +52,10 @@ export function Heatmap({
       <div className="panel-heading">
         <div>
           <span className="eyebrow">ACTIVITY</span>
-          <h2>每一日的積累</h2>
+          <h2>{t("每一日的積累")}</h2>
         </div>
         <span className="quiet-chip">
-          {active} 個活躍日 <span>/ 365</span>
+          {t("{count} 個活躍日", { count: active })} <span>/ 365</span>
         </span>
       </div>
       <div className="heatmap-scroll" ref={scroller}>
@@ -67,7 +69,7 @@ export function Heatmap({
                   {first &&
                   (!previous ||
                     first.date.slice(0, 7) !== previous.date.slice(0, 7))
-                    ? `${Number(first.date.slice(5, 7))}月`
+                    ? new Date(`${first.date}T00:00:00+08:00`).toLocaleDateString(locale, { timeZone: "Asia/Taipei", month: language === "en" ? "short" : "numeric" })
                     : ""}
                 </span>
               );
@@ -75,15 +77,12 @@ export function Heatmap({
           </div>
           <div className="heatmap-with-labels">
             <div className="week-labels">
-              <span>一</span>
-              <span>三</span>
-              <span>五</span>
-              <span>日</span>
+              {(language === "en" ? ["M", "W", "F", "S"] : ["一", "三", "五", "日"]).map((label, i) => <span key={i}>{label}</span>)}
             </div>
             <div
               className="heatmap-grid"
               role="group"
-              aria-label="全年代碼活動熱圖，點選日期查看當日資料"
+              aria-label={t("全年代碼活動熱圖，點選日期查看當日資料")}
             >
               {weeks.map((week, i) => (
                 <div className="heatmap-week" key={i}>
@@ -92,8 +91,8 @@ export function Heatmap({
                       <button
                         key={day.date}
                         className={`heat-cell level-${level(day)} ${day.date >= start && day.date <= end ? "in-range" : ""} ${day.date === start && day.date === end ? "selected-cell" : ""}`}
-                        aria-label={`${day.date}：新增 ${day.additions} 行、刪除 ${day.deletions} 行、${day.commits} commits，查看當日`}
-                        title={`${day.date} · +${day.additions.toLocaleString()} / −${day.deletions.toLocaleString()} · ${day.commits} commits`}
+                        aria-label={t("{date}：新增 {added} 行、刪除 {deleted} 行、{commits} commits，查看當日", { date: day.date, added: day.additions, deleted: day.deletions, commits: day.commits })}
+                        title={`${day.date} · +${number(day.additions)} / −${number(day.deletions)} · ${day.commits} commits`}
                         onMouseEnter={() => setHoveredDate(day.date)}
                         onFocus={() => setHoveredDate(day.date)}
                         onClick={() => onSelect(day.date)}
@@ -114,19 +113,19 @@ export function Heatmap({
       <div className="heatmap-footer">
         <span>
           {hovered
-            ? `${hovered.date} · ${hovered.changed.toLocaleString()} 行變更 · ${hovered.commits} commits`
-            : `${days[0].date} — ${days.at(-1)?.date} · 點選一天查看明細`}
+            ? t("{date} · {changed} 行變更 · {commits} commits", { date: hovered.date, changed: number(hovered.changed), commits: hovered.commits })
+            : t("{start} — {end} · 點選一天查看明細", { start: days[0].date, end: days.at(-1)!.date })}
         </span>
         <div className="heatmap-legend">
-          <span>少</span>
+          <span>{t("少")}</span>
           {[0, 1, 2, 3, 4].map((i) => (
             <i key={i} className={`heat-cell level-${i}`} />
           ))}
-          <span>多</span>
+          <span>{t("多")}</span>
         </div>
       </div>
       <span className="sr-only">
-        最近涵蓋日期：{shiftDate(days.at(-1)!.date, 0)}。完整統計可匯出 CSV。
+        {t("最近涵蓋日期：{date}。完整統計可匯出 CSV。", { date: days.at(-1)!.date })}
       </span>
     </section>
   );

@@ -31,7 +31,7 @@ export interface RepositoryReport {
 
 export interface Report {
   version: 1;
-  user: { login: string; avatarUrl: string; url: string };
+  user: { id?: string; login: string; avatarUrl: string; url: string };
   generatedAt: string;
   range: { start: string; end: string; until: string };
   timezone: "Asia/Taipei";
@@ -40,12 +40,180 @@ export interface Report {
   repositories: RepositoryReport[];
 }
 
+export interface AccountReport {
+  report: Report;
+  lastAttemptAt: string;
+  syncError: string | null;
+}
+
+export interface ReportStore {
+  version: 2;
+  accounts: AccountReport[];
+}
+
+export type CombinedReport = Omit<Report, "version" | "user"> & {
+  accounts: AccountReport[];
+};
+
+export function normalizeStore(value: unknown): ReportStore {
+  const input = value as Report | ReportStore | null;
+  const accounts =
+    input?.version === 1
+      ? [{ report: input, lastAttemptAt: input.generatedAt, syncError: null }]
+      : input?.version === 2
+        ? input.accounts
+        : null;
+  if (
+    !Array.isArray(accounts) ||
+    accounts.some((account) => {
+      const report = account?.report;
+      return (
+        !report || report.version !== 1 || report.timezone !== "Asia/Taipei" ||
+        !report.user?.login || !Array.isArray(report.repositories) ||
+        !report.range?.start || !report.range?.end || !report.generatedAt ||
+        typeof account.lastAttemptAt !== "string" ||
+        !(account.syncError === null || typeof account.syncError === "string")
+      );
+    })
+  )
+    throw new Error("快取格式無效；請將 .cache/report.json 移至備份位置後重新同步。");
+  const identities = new Set<string>();
+  for (const { report } of accounts) {
+    dateRange(report.range.start, report.range.end);
+    const key = report.user.id ?? report.user.login.toLowerCase();
+    if (identities.has(key))
+      throw new Error("快取包含重複帳號，請先備份後重新同步。");
+    identities.add(key);
+  }
+  return { version: 2, accounts };
+}
+
+function sameAccount(a: Report["user"], b: Report["user"]) {
+  return a.id && b.id
+    ? a.id === b.id
+    : a.login.toLowerCase() === b.login.toLowerCase();
+}
+
+export function updateAccount(store: ReportStore, report: Report): ReportStore {
+  const account: AccountReport = {
+    report,
+    lastAttemptAt: report.generatedAt,
+    syncError: null,
+  };
+  const accounts = store.accounts.filter(
+    (entry) => !sameAccount(entry.report.user, report.user),
+  );
+  accounts.push(account);
+  accounts.sort((a, b) => a.report.user.login.localeCompare(b.report.user.login));
+  return { version: 2, accounts };
+}
+
+export function accountFailure(
+  store: ReportStore,
+  user: Report["user"],
+  error: string,
+  at: string,
+): ReportStore {
+  return {
+    version: 2,
+    accounts: store.accounts.map((account) =>
+      sameAccount(account.report.user, user)
+        ? { ...account, lastAttemptAt: at, syncError: error }
+        : account,
+    ),
+  };
+}
+
+export function combineReports(
+  store: ReportStore,
+  login = "all",
+): CombinedReport | null {
+  const accounts = store.accounts.filter(
+    ({ report }) => login === "all" || report.user.login === login,
+  );
+  if (!accounts.length) return null;
+  const reports = accounts.map((account) => account.report);
+  const end = reports.map((report) => report.range.end).sort().at(-1)!;
+  // Bound the union to one year even when an account has not synced for years.
+  const earliest = reports.map((report) => report.range.start).sort()[0];
+  const start = [shiftDate(end, -364), earliest].sort().at(-1)!;
+  return {
+    accounts,
+    generatedAt: reports.map((report) => report.generatedAt).sort().at(-1)!,
+    range: {
+      start, end,
+      until: reports.map((report) => report.range.until).sort().at(-1)!,
+    },
+    timezone: "Asia/Taipei",
+    partial: accounts.some(
+      (account) => account.report.partial || account.syncError !== null,
+    ),
+    excludedForks: reports.reduce((sum, report) => sum + report.excludedForks, 0),
+    repositories: reports.flatMap((report) => report.repositories),
+  };
+}
+
+function scopedAccounts(
+  report: Report | CombinedReport,
+  repository: string,
+): AccountReport[] {
+  const accounts = "accounts" in report
+    ? report.accounts
+    : [{ report, lastAttemptAt: report.generatedAt, syncError: null }];
+  return accounts.filter((account) =>
+    repository === "all" ||
+    account.report.repositories.some((repo) => repo.fullName === repository),
+  );
+}
+
+export function coverageFor(
+  report: Report | CombinedReport,
+  start: string,
+  end: string,
+  repository = "all",
+) {
+  const accounts = scopedAccounts(report, repository);
+  return {
+    accounts,
+    partial: accounts.some(({ report, syncError }) =>
+      report.partial || syncError !== null ||
+      start < report.range.start || end > report.range.end,
+    ),
+  };
+}
+
 export interface SyncStatus {
   running: boolean;
   completed: number;
   total: number;
   current: string;
   error: string | null;
+  account?: string | null;
+}
+
+export interface AuthAccount {
+  login: string;
+  active: boolean;
+  state: string;
+}
+
+export interface AuthStatus {
+  accounts: AuthAccount[];
+  running: boolean;
+  operation: "login" | "switch" | "refresh" | null;
+  code: string | null;
+  verificationUrl: string | null;
+  error: string | null;
+  message: string | null;
+  configuration?: { clientId: string; appId: string; appUrl: string; configured: boolean; storage: "keychain" | "session" };
+  installation?: InstallationStatus | null;
+}
+
+export interface InstallationStatus {
+  state: "unknown" | "missing" | "ready" | "suspended" | "permissions" | "empty";
+  url: string;
+  repositoryCount: number;
+  selection: "all" | "selected" | null;
 }
 
 export function taipeiDate(value: Date | string): string {
@@ -143,7 +311,7 @@ export function totals(days: DailyStat[]) {
 }
 
 export function viewReport(
-  report: Report,
+  report: Report | CombinedReport,
   start: string,
   end: string,
   repository = "all",
@@ -191,17 +359,25 @@ export function viewReport(
 }
 
 export function dailyCsv(
-  report: Report,
+  report: Report | CombinedReport,
   start: string,
   end: string,
   repository = "all",
 ): string {
   const scope = repository === "all" ? "all repositories" : repository;
   const escape = (value: string) => `"${value.replaceAll('"', '""')}"`;
+  const coverage = coverageFor(report, start, end, repository);
+  const accountNames = coverage.accounts.map((account) => account.report.user.login).join("; ");
+  const syncTimes = coverage.accounts.map((account) =>
+    `${account.report.user.login}=${account.report.generatedAt}`).join("; ");
+  const ranges = coverage.accounts.map((account) =>
+    `${account.report.user.login}=${account.report.range.start}..${account.report.range.end}`).join("; ");
+  const errors = coverage.accounts.filter((account) => account.syncError).map((account) =>
+    `${account.report.user.login}: ${account.syncError}`).join("; ");
   const rows = viewReport(report, start, end, repository).daily.map((day) =>
     [
       day.date,
-      report.user.login,
+      accountNames,
       scope,
       day.additions,
       day.deletions,
@@ -209,8 +385,10 @@ export function dailyCsv(
       day.changed,
       day.commits,
       report.timezone,
-      report.partial ? "partial" : "complete",
-      report.generatedAt,
+      coverage.partial ? "partial" : "complete",
+      syncTimes,
+      ranges,
+      errors,
     ]
       .map((value) =>
         typeof value === "number" ? String(value) : escape(value),
@@ -220,7 +398,7 @@ export function dailyCsv(
   return (
     "\uFEFF" +
     [
-      "date,account,repository,additions,deletions,net,changed,commits,timezone,coverage,synced_at",
+      "date,account,repository,additions,deletions,net,changed,commits,timezone,coverage,synced_at,account_ranges,sync_errors",
       ...rows,
     ].join("\r\n")
   );

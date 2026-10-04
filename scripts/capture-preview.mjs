@@ -3,6 +3,7 @@ import { mkdir } from "node:fs/promises";
 
 await mkdir("artifacts", { recursive: true });
 const browser = await chromium.launch({ channel: "msedge" });
+const baseURL = process.argv[2] ?? "http://127.0.0.1:4317";
 for (const [name, width, height] of [
   ["desktop", 1440, 1100],
   ["mobile", 390, 844],
@@ -13,7 +14,7 @@ for (const [name, width, height] of [
   });
   const errors = [];
   page.on("pageerror", (error) => errors.push(error.message));
-  await page.goto("http://127.0.0.1:4317", { waitUntil: "networkidle" });
+  await page.goto(baseURL, { waitUntil: "networkidle" });
   await page.getByTestId("ADDITIONS").waitFor();
   await page.locator(".recharts-surface").waitFor();
   await page.screenshot({ path: `artifacts/${name}.png`, fullPage: true });
