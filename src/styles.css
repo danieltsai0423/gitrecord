@@ -1,4 +1,7 @@
 :root {
+  --compare-blue: #88b7df;
+  --compare-purple: #bfa6db;
+  --compare-amber: #d9bf7e;
   font-family: "Segoe UI", "Microsoft JhengHei", "PingFang TC", sans-serif;
   color: var(--text);
   background: var(--background);
@@ -48,6 +51,9 @@
   --progress-border: #364d3d;
 }
 :root[data-theme="light"] {
+  --compare-blue: #326aa5;
+  --compare-purple: #7856a0;
+  --compare-amber: #8d6d1d;
   color-scheme: light;
   --background: #f5f7f5;
   --surface: #fff;

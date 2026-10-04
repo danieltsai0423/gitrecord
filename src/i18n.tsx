@@ -1,9 +1,11 @@
 import { createContext, useContext, useMemo, useState, type ReactNode } from "react";
+import { reflectionMessages } from "./reflectionMessages";
 
 export type Language = "zh-Hant" | "en";
 const storageKey = "gitrecord-language";
 
 const messages = {
+  ...reflectionMessages,
   "切換為淺色模式": "Switch to light mode",
   "切換為深色模式": "Switch to dark mode",
   "開啟 {login} 的 GitHub 個人頁": "Open {login}'s GitHub profile",

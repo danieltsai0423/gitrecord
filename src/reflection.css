@@ -1,0 +1,128 @@
+.reflection-workspace { margin-bottom: 24px; min-width: 0; scroll-margin-top: 24px; }
+.reflection-heading { gap: 20px; align-items: center; }
+.reflection-heading p { margin: 9px 0 0; color: var(--muted); font-size: 12px; }
+.reflection-actions { flex-shrink: 0; }
+.reflection-toolbar { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin: 20px 24px 0; border-bottom: 1px solid var(--border); }
+.reflection-tabs { display: flex; gap: 20px; }
+.reflection-tabs button { background: none; padding: 12px 0; color: var(--muted); border-bottom: 2px solid transparent; font-size: 13px; white-space: nowrap; }
+.reflection-tabs button[aria-selected="true"] { border-color: var(--green); color: var(--text); }
+.reflection-periods { display: flex; gap: 6px; }
+.reflection-periods button { background: var(--subtle); border: 1px solid var(--border); color: var(--secondary); border-radius: 5px; padding: 6px 10px; font-size: 11px; white-space: nowrap; }
+.reflection-body { padding: 24px; }
+.reflection-body [role="tabpanel"]:focus-visible { outline: 2px solid var(--green); outline-offset: 5px; }
+.review-story { display: grid; grid-template-columns: minmax(0, 1fr) minmax(190px, .28fr); gap: 32px; }
+.review-narrative p { color: var(--secondary); font-size: 13px; line-height: 1.8; margin: 0 0 10px; overflow-wrap: anywhere; }
+.review-narrative p.review-lead { font-size: 19px; font-weight: 500; color: var(--text); line-height: 1.7; }
+.review-comparison { display: flex; align-items: center; gap: 7px; }
+.review-facts { display: grid; gap: 14px; border-left: 1px solid var(--border); margin: 0; padding-left: 24px; }
+.review-facts > div { display: flex; align-items: baseline; justify-content: space-between; gap: 14px; }
+.review-facts dt { font-size: 12px; color: var(--muted); }
+.review-facts dd { font-size: 17px; margin: 0; color: var(--text); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.review-months-heading { display: flex; justify-content: space-between; flex-wrap: wrap; gap: 10px; color: var(--muted); font-size: 11px; margin: 28px 0 12px; }
+.review-months { display: flex; gap: 16px; padding-bottom: 6px; overflow-x: auto; }
+.review-months > div { flex: 1; min-width: 54px; }
+.review-months strong { display: block; font-size: 12px; font-weight: 500; margin-bottom: 8px; color: var(--secondary); }
+.review-month-track { height: 45px; display: flex; align-items: flex-end; border-bottom: 2px solid var(--track); }
+.review-month-track i { display: block; width: 100%; background: var(--green); opacity: .65; border-radius: 3px 3px 0 0; }
+.review-months span { display: block; margin-top: 7px; color: var(--muted); font-size: 10px; }
+.review-months .month-partial i { background: var(--coral); }
+.reflection-hint { font-size: 12px; color: var(--muted); line-height: 1.7; margin: 12px 0; overflow-wrap: anywhere; }
+.reflection-hint > svg { vertical-align: middle; margin-right: 6px; }
+.reflection-partial { color: var(--warning-text); font-size: 12px; line-height: 1.7; }
+.reflection-body > .reflection-partial { background: var(--warning-background); border-radius: 5px; padding: 10px 14px; margin: 0 0 20px; }
+.reflection-footnote { font-size: 10px; line-height: 1.6; color: var(--muted); margin: 24px 0 0; }
+.comparison-caption { display: flex; align-items: center; justify-content: space-between; gap: 18px; margin-bottom: 16px; }
+.comparison-caption p { color: var(--secondary); line-height: 1.7; font-size: 13px; margin: 0; }
+.comparison-caption label { display: flex; align-items: center; gap: 9px; font-size: 11px; color: var(--muted); flex-shrink: 0; }
+.reflection-workspace select { padding: 8px 10px; background: var(--subtle); border: 1px solid var(--border); border-radius: 5px; }
+.comparison-scroll { overflow-x: auto; }
+.comparison-table { min-width: 760px; width: 100%; border-collapse: collapse; }
+.comparison-table td, .comparison-table th { padding: 14px 12px; font-size: 12px; }
+.comparison-table th { background: none; color: var(--muted); font-weight: 400; }
+.comparison-table td:first-child { max-width: 220px; }
+.comparison-table td:first-child strong { overflow-wrap: anywhere; }
+.comparison-table small { display: block; color: var(--muted); font-size: 10px; margin-top: 7px; white-space: nowrap; }
+.comparison-spark { width: 150px; height: 40px; display: block; }
+.tone-0 { color: var(--green); }
+.tone-1 { color: var(--coral); }
+.tone-2 { color: var(--compare-blue); }
+.tone-3 { color: var(--compare-purple); }
+.tone-4 { color: var(--compare-amber); }
+.account-tone { display: inline-block; width: 7px; height: 7px; border-radius: 50%; background: currentColor; margin-right: 8px; }
+.shared-days { display: flex; gap: 12px; padding: 18px; margin-top: 16px; border-radius: 6px; background: var(--subtle); color: var(--green); }
+.shared-days strong { font-size: 13px; font-weight: 500; color: var(--text); }
+.shared-days p { margin: 6px 0 0; color: var(--muted); font-size: 12px; line-height: 1.7; }
+.rhythm-heading { display: flex; justify-content: space-between; align-items: center; gap: 16px; }
+.rhythm-heading h3 { display: flex; align-items: center; gap: 8px; font-size: 16px; margin: 0; font-weight: 500; }
+.rhythm-heading p { font-size: 12px; color: var(--muted); margin: 10px 0; }
+.rhythm-grid { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 9px; margin: 16px 0; }
+.rhythm-day { background: var(--subtle); border: 1px solid var(--border); border-radius: 6px; padding: 14px 5px; text-align: center; color: var(--muted); }
+.rhythm-day span { font-size: 12px; }
+.rhythm-day strong { display: block; font-size: 23px; font-weight: 400; margin: 9px 0; }
+.rhythm-day small { display: block; font-size: 10px; margin-top: 4px; }
+.rhythm-day.active { color: var(--green); background: var(--progress-background); border-color: var(--progress-border); }
+.rhythm-day.unknown { border-style: dashed; color: var(--warning-text); }
+.rhythm-day.outside { opacity: .6; }
+.rhythm-progress { display: flex; gap: 16px; align-items: center; font-size: 13px; flex-wrap: wrap; }
+.rhythm-progress progress { accent-color: var(--green); height: 7px; flex: 1; min-width: 80px; max-width: 320px; }
+.rhythm-progress strong { font-weight: 500; }
+.recap-dialog { width: min(760px, calc(100vw - 32px)); max-height: calc(100dvh - 32px); padding: 26px; background: var(--surface); border: 1px solid var(--border); color: var(--text); border-radius: 10px; overflow-y: auto; }
+.recap-dialog::backdrop { background: #080f0ccc; }
+.recap-header { display: flex; align-items: center; justify-content: space-between; gap: 16px; }
+.recap-header h2 { margin: 8px 0 0; }
+.recap-privacy { display: flex; align-items: center; gap: 9px; margin: 16px 0; font-size: 13px; }
+.recap-privacy input { accent-color: var(--green); flex-shrink: 0; }
+.recap-canvas { display: block; width: 100%; height: auto; border: 1px solid var(--border); border-radius: 6px; }
+.recap-text { margin: 16px 0; font-size: 12px; color: var(--secondary); }
+.recap-text summary { cursor: pointer; }
+.recap-text pre { max-height: 210px; overflow-y: auto; white-space: pre-wrap; overflow-wrap: anywhere; background: var(--subtle); padding: 14px; line-height: 1.7; user-select: text; }
+.recap-actions { display: flex; gap: 10px; justify-content: flex-end; flex-wrap: wrap; }
+@media screen and (max-width: 760px) {
+  .reflection-heading { align-items: flex-start; }
+  .reflection-toolbar { flex-wrap: wrap; }
+  .reflection-periods { padding: 4px 0 12px; }
+  .review-story { grid-template-columns: minmax(0, 1fr); gap: 20px; }
+  .review-facts { grid-template-columns: repeat(3, minmax(0, 1fr)); border-left: 0; border-top: 1px solid var(--border); padding: 16px 0 0; gap: 10px; }
+  .review-facts > div { display: block; }
+  .review-facts dd { margin-top: 8px; font-size: 16px; }
+  .comparison-caption { align-items: flex-start; flex-direction: column; }
+  .comparison-table { min-width: 0; display: block; }
+  .comparison-table thead { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
+  .comparison-table tbody { display: grid; gap: 14px; }
+  .comparison-table tr { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); padding: 12px; border: 1px solid var(--border); border-radius: 6px; }
+  .comparison-table td { display: block; min-width: 0; border: 0; padding: 8px 0; }
+  .comparison-table td:first-child { grid-column: 1 / 3; max-width: none; padding-right: 8px; }
+  .comparison-table td:nth-child(2) { display: flex; align-items: center; }
+  .comparison-table td[data-label] { border-top: 1px solid var(--border); font-size: 16px; font-variant-numeric: tabular-nums; }
+  .comparison-table td[data-label]::before { display: block; content: attr(data-label); color: var(--muted); font-size: 10px; margin-bottom: 7px; }
+  .comparison-table td:last-child { grid-column: 1 / -1; padding-bottom: 0; }
+  .comparison-table small { white-space: normal; line-height: 1.5; }
+  .comparison-spark { width: 100%; height: auto; }
+  .rhythm-heading { align-items: flex-start; flex-direction: column; gap: 0; }
+}
+@media screen and (max-width: 480px) {
+  .reflection-heading { flex-wrap: wrap; gap: 14px; }
+  .reflection-toolbar { margin-inline: 18px; gap: 0; }
+  .reflection-tabs { width: 100%; max-width: 100%; min-width: 0; gap: 14px; overflow-x: auto; }
+  .reflection-tabs button { font-size: 12px; }
+  .reflection-body { padding: 18px; }
+  .review-narrative p.review-lead { font-size: 17px; }
+  .rhythm-grid { gap: 4px; }
+  .rhythm-day { padding: 12px 2px; }
+  .rhythm-day span { font-size: 10px; }
+  .rhythm-day small { font-size: 8px; }
+  .recap-dialog { padding: 18px; }
+  .recap-actions { justify-content: stretch; }
+  .recap-actions .button { flex: 1; font-size: 12px; }
+}
+@media print {
+  .reflection-body { padding: 16px; }
+  .reflection-workspace { break-inside: auto; }
+  .comparison-scroll { overflow: visible; }
+  .comparison-table { min-width: 0; }
+  .comparison-spark { width: 100px; }
+  .review-months { overflow: visible; gap: 8px; }
+  .review-months > div { min-width: 0; }
+  .rhythm-day { background: #fff; }
+  .reflection-partial { color: #795815; }
+}

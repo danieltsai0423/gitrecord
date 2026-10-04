@@ -20,6 +20,7 @@ import {
   IconChevronDown,
   IconSun,
   IconMoon,
+  IconNotebook,
 } from "@tabler/icons-react";
 import { combineReports, coverageFor, dailyCsv, shiftDate, viewReport } from "../shared/report";
 import { useReport } from "./useReport";
@@ -28,8 +29,10 @@ import { Heatmap } from "./components/Heatmap";
 import { RepositoryList } from "./components/RepositoryList";
 import { AccountPanel } from "./components/AccountPanel";
 import { CoverageNotice } from "./components/CoverageNotice";
+import { ReflectionWorkspace } from "./components/ReflectionWorkspace";
 import { readTheme, saveTheme } from "./theme";
 import { useLanguage } from "./i18n";
+import "./reflection.css";
 
 const TrendChart = lazy(() =>
   import("./components/TrendChart").then((module) => ({
@@ -197,6 +200,7 @@ export default function App() {
         <nav aria-label={t("Dashboard 導覽")}>
           {[
             ["overview", t("總覽"), IconLayoutDashboard],
+            ["reflection", t("回顧與節奏"), IconNotebook],
             ["activity", t("活動紀錄"), IconActivity],
             ["repositories", "Repositories", IconGitBranch],
             ["daily", t("每日報告"), IconChartLine],
@@ -590,6 +594,10 @@ export default function App() {
                     </div>
                   ))}
                 </section>
+                <ReflectionWorkspace report={report} start={start} end={end} repository={selectedRepo} light={theme === "light"} combined={selectedAccount === "all"} onPeriod={(days) => {
+                  setPeriod(days);
+                  setShowAllDays(false);
+                }} />
                 <div className="charts-row">
                   <section className="panel trend-panel">
                     <div className="panel-heading">

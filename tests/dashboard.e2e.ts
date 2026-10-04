@@ -793,7 +793,8 @@ test("涵蓋提示安裝連結可等候完成，未安裝時重新檢查不會�
   await expect(page.getByText("正在等待 GitHub 完成設定…", { exact: true })).toBeVisible();
   installed = true;
   await popup.close();
-  await expect.poll(() => syncs).toBe(1);
+  // Installation checks run every five seconds; include the next check and UI update.
+  await expect.poll(() => syncs, { timeout: 10000 }).toBe(1);
 });
 
 test("涵蓋提示重新檢查失敗保留資料，重試可同步；未登入帳號提供連接入口", async ({ page }) => {

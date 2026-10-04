@@ -1,170 +1,307 @@
-# GitRecord · GitHub 活動紀錄
+# GitRecord
 
-以真實 GitHub commit 資料查看每日新增、刪除、淨增行數與活動趨勢。介面支援繁體中文與英文，可用於桌面與手機。私人 repository 的統計只保存在本機。
+**Your code, over time.** A local dashboard for GitHub commit activity, multi-account reviews, and privacy-aware exports.
 
-原始碼：[danieltsai0423/gitrecord](https://github.com/danieltsai0423/gitrecord)（private repo）。
+**English** · [繁體中文](README.zh-TW.md)
 
-## 啟動
+[![MIT License](https://img.shields.io/badge/license-MIT-green)](LICENSE)
+[![Node.js](https://img.shields.io/badge/Node.js-%E2%89%A522.12-43853d)](https://nodejs.org/)
+[![Validation](https://github.com/danieltsai0423/gitrecord/actions/workflows/validate.yml/badge.svg)](https://github.com/danieltsai0423/gitrecord/actions/workflows/validate.yml)
 
-需要 Node.js 22.12 以上。**不需要安裝 GitHub CLI，也不需要手動輸入 token。** 首次登入、新增帳號、切換與同步都在 Dashboard 操作；程式直接使用 GitHub OAuth device flow 與 REST／GraphQL API。
+GitRecord turns saved GitHub commit statistics into daily trends, repository breakdowns, and period reviews. Connect personal accounts through GitHub, synchronize them one at a time, and view their activity together. Reports stay on your computer.
 
-在專案資料夾的 PowerShell 執行：
+**No GitHub CLI installation, manually entered token, or custom GitHub App is needed for normal use.**
+
+![GitRecord dark dashboard with account and project names redacted](docs/images/dashboard-dark-en.png)
+
+*Screenshots use synthetic demo data. Every account and project name is masked before capture, including public repository names.*
+
+## Contents
+
+- [Features](#features)
+- [Quick start](#quick-start)
+- [Connect and manage accounts](#connect-and-manage-accounts)
+- [Review your work](#review-your-work)
+- [Screenshots](#screenshots)
+- [How statistics are calculated](#how-statistics-are-calculated)
+- [Privacy and security](#privacy-and-security)
+- [Configuration](#configuration)
+- [Troubleshooting](#troubleshooting)
+- [Development](#development)
+- [Contributing and license](#contributing-and-license)
+
+## Features
+
+| Capability | What it provides |
+| --- | --- |
+| Multi-account analytics | Combined or individual reports, independent account caches, and per-account sync times |
+| Activity dashboard | Additions, deletions, net changes, commits, trends, an annual heatmap, and daily details |
+| Flexible filters | Last 7, 30, 90, or 365 days, custom dates, account selection, and repository selection |
+| Period review | Main projects, monthly activity, longest active streak, and comparison with an equal-length previous period |
+| Account comparison | The same dates and chart scale, plus shared active days across accounts |
+| Weekly goals | User-defined active-day goals, with each calendar date counted once across accounts |
+| Exports | Daily CSV, printable reports, and locally generated PNG or Markdown recap cards |
+| Accessible interface | English / Traditional Chinese, light / dark themes, responsive layouts, keyboard controls, and reduced-motion support |
+| Honest coverage | Missing dates, partial syncs, and saved sync failures are shown explicitly |
+
+## Quick start
+
+### Requirements
+
+- **Node.js 22.12 or newer**, with npm.
+- A modern browser and a GitHub account.
+- An internet connection for installing dependencies, authorizing accounts, and synchronizing GitHub data.
+- **Windows 11 is the currently validated platform.** macOS and Linux have not yet been verified; credential persistence depends on the operating system's keyring.
+- Git if you want to clone the repository. You can instead [download the source ZIP](https://github.com/danieltsai0423/gitrecord/archive/refs/heads/main.zip).
+
+Run these commands in **Windows PowerShell**:
 
 ```powershell
+git clone https://github.com/danieltsai0423/gitrecord.git
+Set-Location .\gitrecord
 npm.cmd ci
 npm.cmd run build
 npm.cmd start
 ```
 
-開啟 [本機 Dashboard](http://127.0.0.1:4317)，按「連接 GitHub 帳號」。在 GitHub 完成授權，首次再按「前往 GitHub 選擇 repos」安裝 App 並選擇要統計的 repositories；保持 Dashboard 開啟，完成後會自動同步近一年資料。已安裝者直接同步，不必重新選擇。同步時間取決於 repo 數量與 GitHub 回應速度。已有快取時直接顯示保存的報告，按「同步目前帳號」取得最新資料。
+If you downloaded the ZIP, open PowerShell in the extracted project folder and start from `npm.cmd ci`.
 
-若預設埠被占用：
+Open **[http://127.0.0.1:4317](http://127.0.0.1:4317)**, select **Connect GitHub account**, and follow the authorization steps below. The first successful connection synchronizes the most recent 365 days. Existing saved reports can be viewed immediately; use **Sync current account** to update them.
+
+If port 4317 is occupied:
 
 ```powershell
 npm.cmd start -- --port 4320
 ```
 
-也可以只同步資料：
+Then open [http://127.0.0.1:4320](http://127.0.0.1:4320). Keep one application process per project directory to avoid concurrent cache writes.
+
+## Connect and manage accounts
+
+The repository is preconfigured with the public [GitRecord by Daniel](https://github.com/apps/gitrecord-by-daniel) GitHub App. Ordinary users do not need to register an App, configure a callback URL, or create a client secret.
+
+1. Select **Connect GitHub account** or **Add GitHub account** in the dashboard.
+2. Copy the one-time authorization code and open GitHub. Sign in to the intended account, enter the code, and authorize the App. Password entry and two-factor authentication happen on GitHub.
+3. On first use for that account, select **Choose repos on GitHub**, install the App on your **personal account**, and choose the repositories to include.
+4. Return to GitRecord. It checks installation access and starts synchronization once access is ready. If waiting has stopped, use **Recheck**.
+5. Repeat once for each additional account. For accounts already connected, choose the account and select **Switch & sync**.
+
+GitHub authorization and App installation are separate steps. Each account needs its own initial authorization and installation. Later switching normally reuses saved credentials; expired or revoked authorization may require reconnecting.
+
+**The account filter changes the report you view. The authorized account determines which account is synchronized.** Filtering reports does not switch the account used for synchronization.
+
+- Use **Manage repository access** to change the selected repositories, then synchronize again.
+- Use the account panel's expand / collapse button to keep account controls out of the way; your browser remembers the choice.
+- **Remove connection** removes that account's local credential while preserving saved statistics.
+- GitHub-side access can be revoked through [Authorized GitHub Apps](https://github.com/settings/apps/authorizations) or [Installed GitHub Apps](https://github.com/settings/installations).
+
+## Review your work
+
+The **Review & rhythm** workspace follows the global account and date filters. Period review and account comparison also follow the repository filter.
+
+### Period review
+
+See recorded active days, commits, main projects, the most active day, monthly distribution, and the longest streak within the selected period. Comparisons use the immediately preceding period of the same length and appear only when both periods have complete data. Monthly bars include only dates inside the selected range.
+
+### Account comparison
+
+Compare accounts over the same dates with a shared chart scale. Choose commits or lines changed. **Shared active days** means dates with commits on at least two accounts; combined active days still count each date once. Desktop uses a table, and mobile uses account cards.
+
+### Rhythm and goals
+
+Set your own weekly goal of 1–7 active days; no goal is assumed initially. Weeks run Monday through Sunday, with the selected report end date as the cutoff. Days after the cutoff are marked **Outside cutoff**.
+
+Goals use **all repositories in the selected account scope**, independently of the repository filter. Settings are saved in the browser by stable GitHub user ID or combined-account scope. If browser storage is unavailable, a goal can still be used for that session.
+
+A zero-line commit still counts as activity. Missing data is not treated as a rest day, and incomplete data does not produce a confirmed streak. These are activity indicators, not productivity rankings.
+
+### Recap cards and reports
+
+Select **Create recap card** to preview a PNG or Markdown summary of the selected period, including monthly activity, main projects, and each account's sync time and coverage. The snapshot is fixed when the preview opens.
+
+- Account names and private project names are hidden by default. Public repositories retain their project name without the owner prefix. You can explicitly turn masking off.
+- Images and text are generated locally and are not uploaded to a sharing service.
+- **CSV and printable reports include account and repository names.** Review them before sharing. You can save a printable report as PDF through your browser's print dialog.
+
+Recaps use the dates available in the saved report, including a 365-day review; they cannot reconstruct history outside the saved window.
+
+## Screenshots
+
+<details>
+<summary>Activity trends, account comparison, light theme, and mobile goals</summary>
+
+### Activity trends and repository breakdown
+
+![Activity chart and repository breakdown with all project names redacted](docs/images/activity-dark-en.png)
+
+### Multi-account comparison
+
+![Account comparison with account names masked](docs/images/comparison-dark-en.png)
+
+### Light theme and Traditional Chinese
+
+![Traditional Chinese light dashboard with account and project names redacted](docs/images/dashboard-light-zh-TW.png)
+
+### Account management
+
+![Expanded account controls with names redacted](docs/images/accounts-light-zh-TW.png)
+
+### Mobile weekly goals
+
+<img src="docs/images/goals-mobile-en.png" alt="Weekly active-day goal on mobile" width="354">
+
+</details>
+
+All documentation images are reproducible through [`scripts/capture-docs.mjs`](scripts/capture-docs.mjs). It uses synthetic data, replaces names with opaque masks, and never reads your local report or credentials.
+
+## How statistics are calculated
+
+| Rule | Definition |
+| --- | --- |
+| Repositories | Readable, personally owned, non-fork repositories selected in that account's GitHub App installation; both public and private are supported |
+| Branch | Each repository's default branch, with its HEAD commit fixed at the start of that repository's query |
+| Author | Commits associated with the connected GitHub user ID; no email-based identity inference |
+| Commits | Non-merge commits, including root commits; deduplicated by commit ID within each repository |
+| Date | `committedDate`, grouped in **Asia/Taipei (UTC+8)**; this timezone is currently fixed |
+| Window | Sync day plus the preceding 364 days, ending at the synchronization cutoff |
+| Additions / deletions | GitHub's commit-level `additions` and `deletions` |
+| Net / changed lines | Additions minus deletions / additions plus deletions |
+| Active day | At least one qualifying commit, even if it changes zero lines |
+| Combined totals | Counts summed across accounts and repositories; active dates are deduplicated |
+| Previous period | Immediately preceding range of equal length, only when both ranges are complete |
+
+**Scope limits:** organization-owned repositories, forks, merge commits, other authors, and work not merged into the default branch are excluded. Commits in separate repositories are counted separately, even if their histories were copied. This is not a replica of GitHub's contribution graph.
+
+Line counts include documentation, generated files, and lockfiles; binary contents have no comparable textual line count. Squashing, rebasing, rewritten history, repository access changes, or author association changes can change subsequent totals. Activity volume does not measure code quality or productivity.
+
+GitHub field definitions are documented in its [Commit schema](https://docs.github.com/en/graphql/reference/commits#commit). Synchronization is subject to [GitHub API rate limits](https://docs.github.com/en/graphql/overview/rate-limits-and-query-limits-for-the-graphql-api).
+
+### Coverage and freshness
+
+Each account retains its own report date range, sync time, and failure status. Resynchronizing replaces that account's report and preserves the others; it does not append duplicate statistics.
+
+The combined window ends on the latest saved report's end date and is capped at 365 days. An account that does not cover selected dates is marked incomplete. A missing date does not establish zero activity. A repository failure marks that account's report partial, and the failed repository's old counts are not mixed into the new report. A global failure preserves the last saved report and shows the error.
+
+The coverage warning provides **GitHub access settings** and **Recheck** for each affected account. Rechecking validates that account's authorization and installation, then synchronizes when ready; report filters remain independent.
+
+## Privacy and security
+
+GitRecord is a **single-user application running on your own computer**. Its Node service listens on `127.0.0.1`, validates local Host headers, rejects cross-origin API requests, and prevents embedding in external frames. It is not a public multi-user hosting service; hosting one requires separate authentication, tenant isolation, and data-storage design.
+
+| Data | Where it goes |
+| --- | --- |
+| Account / repository metadata and daily statistics | Local `.cache/report.json`; private project names can be present, and this report is not encrypted |
+| Access / refresh tokens | OS credential store, through `@napi-rs/keyring`; Windows uses Credential Manager |
+| Credential-store fallback | Process memory only, with a UI notice; reconnecting is required after restart |
+| Public App configuration and current account selection | Local `.cache/oauth.json`, plus the distributed `oauth.config.json` defaults |
+| Language, theme, collapsed panel, and weekly goals | Browser local storage |
+| PNG / Markdown / CSV / print exports | Generated locally; saved or copied only when you request an export |
+
+The GitHub App requests **Contents: read** and **Metadata: read**. GitHub's Contents permission can technically read source files, but GitRecord's implemented queries retrieve repository metadata and commit statistics, not source contents, patches, commit messages, or author emails. Repository access is checked on every sync and restricted to the connected personal account's installation.
+
+Tokens are exchanged and refreshed by the local service. They are not returned to the dashboard, put in URLs, written into reports, or saved as plaintext configuration files. App ID, Client ID, and App URL are public identifiers, not credentials. GitRecord has no application telemetry or analytics endpoint; it still connects to GitHub for authorization and synchronization.
+
+Cache files, credentials, environment files, screenshots of real reports, build output, and test artifacts are excluded from Git. Do not commit your `.cache/` directory or share it unintentionally. See [SECURITY.md](SECURITY.md) for private vulnerability reporting.
+
+## Configuration
+
+### Normal users
+
+The default public App is already configured. You only need to authorize an account and choose repositories. There is no client secret, private key, or redirect callback to enter in GitRecord.
+
+### Maintainers and forks using their own App
+
+1. [Register a GitHub App](https://github.com/settings/apps/new) with a unique name and enable **Device Flow** and **Expire user access tokens**.
+2. Disable webhooks and leave **Request user authorization (OAuth) during installation** unchecked. GitRecord authorizes through device flow before checking installation access; it does not consume a callback or setup URL.
+3. Set **Contents: Read-only**. Metadata is read-only automatically. Do not request other repository, organization, or account permissions or subscribe to events.
+4. Choose **Any account** if other people should be able to install it.
+5. In the dashboard's **GitHub App settings**, enter the App ID, Client ID, and public `https://github.com/apps/<slug>` URL. GitRecord validates their consistency and permissions before saving them.
+6. For distribution, update `oauth.config.json` with your public identifiers. Do not add secrets or private keys.
+
+The distributed defaults are:
+
+```json
+{
+  "clientId": "Iv23lii6E7ARszfJ36kg",
+  "appId": "5185425",
+  "appSlug": "gitrecord-by-daniel"
+}
+```
+
+Configuration precedence is: the complete environment variable group `GITRECORD_GITHUB_CLIENT_ID`, `GITRECORD_GITHUB_APP_ID`, and `GITRECORD_GITHUB_APP_SLUG`; local `.cache/oauth.json`; then distributed `oauth.config.json`. App settings are resolved as a group, without mixing identifiers from different Apps. Switching Apps changes the credential namespace while retaining saved reports.
+
+See GitHub's official [App registration](https://docs.github.com/en/apps/creating-github-apps/registering-a-github-app/registering-a-github-app), [device flow](https://docs.github.com/en/apps/creating-github-apps/authenticating-with-a-github-app/generating-a-user-access-token-for-a-github-app#using-the-device-flow-to-generate-a-user-access-token), and [token refresh](https://docs.github.com/en/apps/creating-github-apps/authenticating-with-a-github-app/refreshing-user-access-tokens) documentation.
+
+### Optional command-line sync
+
+After authorizing in the dashboard, you can synchronize with saved GitRecord credentials:
 
 ```powershell
 npm.cmd run sync
 ```
 
-這個可選的命令直接使用 GitRecord 已保存的 OAuth 憑證，不會執行 `gh`。需先在 Dashboard 授權，且本機憑證管理可用；完成後重新整理頁面即可。一般使用者直接按頁面上的同步按鈕。請勿同時啟動多個寫入相同快取的程序。
+This command calls GitHub directly; it does not run `gh`. Persistent credential storage must be available, and no other process should be writing the same cache. Most users can use the dashboard's sync button instead.
 
-## GitHub App 設定（發布者一次完成）
+## Troubleshooting
 
-專案已預設使用公開的 [GitRecord by Daniel](https://github.com/apps/gitrecord-by-daniel)，App ID `5185425`、Client ID `Iv23lii6E7ARszfJ36kg`。**下載本 repo 的使用者無需建立 App 或填寫上述資料**，只需連接帳號、授權與選擇 repositories。App 權限為 `Contents: read` 與 `Metadata: read`；使用者可選部分 repos 或全部 repos。授權與安裝是 GitHub 的兩個步驟，每個帳號第一次各完成一次。
+| Symptom | What to check |
+| --- | --- |
+| A repository is missing | Check App installation selection, then sync. Organization repositories and forks are excluded; other branches or unassociated authors are not counted. |
+| Authorization succeeded but sync is blocked | Complete App installation for that same personal account and choose at least one eligible repository. Return and select Recheck. |
+| Some accounts do not cover selected dates | Use the warning's account-specific access-settings link and Recheck, or choose a period covered by all accounts. Reauthorizing alone does not update a saved report. |
+| Credentials disappear after restart | Check the credential-storage notice. If the OS store is unavailable, tokens only last for the process and the account needs reconnecting. |
+| A sync failed or reached an API limit | Read the dashboard error, allow GitHub's limit to reset when applicable, and retry. The previous successful report is preserved. |
+| The port is in use | Start with another port, such as `--port 4320`, and open the corresponding loopback URL. |
+| PowerShell blocks an npm script | Use the documented `npm.cmd` commands rather than the PowerShell `npm.ps1` wrapper. |
+| Upgrading from the original CLI / OAuth App version | Reauthorize and install the current GitHub App once per account. Saved report formats are migrated automatically; old tool credentials are not imported. |
 
-Fork 後若要使用自己的 App，發布者可依下列方式設定：
+## Development
 
-1. 開啟 [建立 GitHub App](https://github.com/settings/apps/new)，填入未被使用的名稱與專案 URL，勾選 **Enable Device Flow** 與 **Expire user access tokens**。
-2. 關閉 Webhook，取消 **Request user authorization (OAuth) during installation**；本程式先透過 device flow 授權，再引導安裝。不使用 callback 或 Setup URL，可留空。
-3. Repository permissions 只設定 **Contents: Read-only**；Metadata 自動為 Read-only。其他 repository／organization／account 權限不設定，不訂閱事件。
-4. 選 **Any account** 讓其他使用者也能安裝。已建立為 private App 可在 Advanced 將 App 改為 public。
-5. Dashboard「GitHub App 設定」填 App ID、Client ID 與 `https://github.com/apps/<slug>`。程式先向 GitHub 核對三項資訊與唯讀權限，通過才保存。
-6. 將公開 `clientId`、`appId`、`appSlug` 寫入根目錄 `oauth.config.json`，隨原始碼發布。不要建立或加入 client secret、私鑰。
-
-App ID、Client ID 與 App URL 是公開識別資訊，不是存取憑證。設定優先序為環境變數 `GITRECORD_GITHUB_CLIENT_ID`／`GITRECORD_GITHUB_APP_ID`／`GITRECORD_GITHUB_APP_SLUG`、本機 `.cache/oauth.json`、根目錄 `oauth.config.json`。本機 App 設定以整組覆蓋預設值，不混用不同 App 的欄位；檔案只有公開 App 設定與目前帳號 ID。切換 App 時登入清單改用該 App 的憑證，保存的報告不受影響。
-
-GitHub 授權頁會顯示 App 名稱，請核對名稱與發布者，只輸入本機 Dashboard 產生的授權碼。設定見 [GitHub App 官方文件](https://docs.github.com/en/apps/creating-github-apps/registering-a-github-app/registering-a-github-app)，授權流程見 [GitHub App user access token／device flow 文件](https://docs.github.com/en/apps/creating-github-apps/authenticating-with-a-github-app/generating-a-user-access-token-for-a-github-app)。
-
-### 從舊版本升級
-
-原本透過 GitHub CLI 或舊 OAuth App 授權的帳號，需要在 GitHub App 重新授權一次。程式不匯入其他工具的憑證。若曾自行設定舊 OAuth App，請在「GitHub App 設定」填入上面的預設 App 資訊或自己的 App 資訊。已有 `.cache/report.json`、多帳號統計與篩選繼續可用；重新授權及同步後接續更新同一帳號資料，改為只包含安裝範圍內的 repos。
-
-## 多帳號整合
-
-1. 沒有任何登入紀錄也可以按「連接 GitHub 帳號」；已有帳號則按「新增 GitHub 帳號」。
-2. 頁面顯示一次性 OAuth 授權碼，按「複製授權碼並開啟 GitHub」，在 GitHub 輸入授權碼、登入目標帳號並確認授權。若複製受瀏覽器限制，可手動複製頁面顯示的碼。
-3. 回到 Dashboard，程式會核對帳號與 App 安裝。若尚未安裝或未選擇個人 repos，按「前往 GitHub 選擇 repos」，選擇剛授權的個人帳號並安裝。頁面每 5 秒檢查一次，存取就緒後自動同步；等候超過 10 分鐘或曾停止等待時，可按「重新檢查」。
-4. 已授權且安裝完成的帳號選擇「切換登入帳號」，按「切換並同步」即可使用，不需再次 OAuth 授權。可用「管理 repo 存取範圍」修改選取範圍，回來按「同步目前帳號」重新查詢；每次同步都重新核對安裝與範圍。
-
-Dashboard 預設顯示「所有帳號合計」，可用「篩選帳號」查看單一帳號，再篩選 repo。**統計篩選只改變畫面，不會切換登入帳號**；上方「目前授權帳號」決定此次同步來源。切換只更新 GitRecord 的帳號選擇；同步與帳號操作互斥，整次同步固定同一身份。可按「更新登入狀態」重新核對 GitHub 身份。
-
-瀏覽器登入與雙重驗證只在 GitHub 進行。GitRecord 的本機 Node 服務交換及更新 OAuth token，使用作業系統憑證管理保存；Windows 使用 Credential Manager。若憑證管理不可用，token 只留在目前程序記憶體，介面會提示重新啟動後需要再授權，不會回退成明文檔案。瀏覽器 API 只取得帳號 metadata 與一次性 user code，不取得 access／refresh token。
-
-GitHub App user token 不請求 OAuth `repo` scope，權限由 App 與使用者安裝範圍決定。GitRecord 要求 Contents／Metadata 唯讀，遇到寫入權限或暫停安裝會停止同步。Contents 唯讀授權本身允許讀取所選 repo 原始碼；GitRecord 的實作只查詢 metadata 與 commit 統計。按「移除登入」刪除該帳號的本機憑證，仍保留統計；GitHub 端可於 [Authorized GitHub Apps](https://github.com/settings/apps/authorizations) 撤銷授權，或於 [Installed GitHub Apps](https://github.com/settings/installations) 修改／移除安裝。
-
-再次同步會取代該帳號的報告，保留其他帳號；不會把前一次資料再累加。新增、刪除與 commit 數依 repo 統計合計，活躍日依日期去重。不同帳號的同名 repo 以完整的 `owner/name` 區分。GitHub user ID 用於辨認帳號更名，舊快取首次同步時則以 username 接續。
-
-帳號卡片會顯示各自的最後同步時間、涵蓋日期與同步狀態。合計最多顯示最新保存報告結束日期往前 365 日；帳號尚未涵蓋的日期明示為部分資料，不能當成零活動。各帳號同一天也可能同步於不同時間，請參考卡片時間。CSV 與列印包含目前篩選帳號、各帳號同步時間和涵蓋範圍。
-
-遇到「部分帳號尚未涵蓋選取日期」，提示會列出需要更新的帳號與資料日期。可直接按該帳號的「GitHub 存取設定」，在 GitHub 選擇對應帳號並完成安裝／repo 存取設定；回來按「重新檢查」，程式會切換到該帳號，核對授權與 App 存取，確認就緒後同步。未連接的帳號提供「連接帳號」入口。同步期間按鈕停用，失敗保留舊資料，統計篩選不因重新檢查而切換。
-
-同步過程請勿切換登入帳號；若偵測到帳號變更，會中止本次同步並保留原報告。同步失敗會保留該帳號上次資料；在已辨認帳號的情況下保存失敗狀態，下次成功同步會清除。新帳號首次失敗尚無可保存的報告，錯誤會顯示在同步訊息。
-
-## 查看報告
-
-- 帳號區塊右上角的向上／向下按鈕可收合或展開帳號操作與詳細資料；收合時仍顯示帳號數與目前授權帳號，瀏覽器會記住選擇。需要連接、安裝、設定或處理授權錯誤時會自動展開。收合不清除下拉選單與設定表單的內容。
-- 右上角「EN／中」按鈕即時切換繁體中文與英文，瀏覽器會記住語言；初次預設繁體中文。包含選單、帳號與 OAuth 操作、狀態提示、圖表、熱圖、日期格式及列印，切換時保留篩選與同步狀態。
-- 右上角太陽／月亮按鈕切換深色與淺色模式，瀏覽器會記住選擇；初次開啟預設深色。圖表、熱圖與表格同步換色，列印固定白底。
-- 7、30、90、365 日與自訂日期；可篩選單一帳號及 repo。
-- 新增、刪除、淨增、commit 數與活躍日摘要。
-- 每日增刪趨勢與全年活動熱圖；點選熱圖日期查看當日。
-- 依變更行數排序的 repo 排行；點選 repo 即可篩選。
-- 每日明細、CSV 與列印報告。CSV 包含全部篩選日期、台北時區、同步時間及 complete／partial 狀態。
-- 點「列印」後，可在瀏覽器列印對話框選擇「另存為 PDF」；列印包含當期全部明細日期。
-
-日期篩選會同步影響摘要、趨勢、排行與每日明細；全年熱圖保留年度上下文，以邊框標記目前日期範圍。熱圖亮度以變更行數的對數分級呈現，滑鼠提示與鍵盤焦點可查看準確數值。手機熱圖與明細表可水平捲動。
-
-## 統計規則
-
-| 項目 | 定義 |
-|---|---|
-| Repository 範圍 | 個人帳號 GitHub App 安裝中選取且可讀取的公開與私人 repos；排除 fork 與組織名下 repos，未選取的公開 repos 也不計入 |
-| 分支範圍 | 每個 repo 的預設分支；同步開始時固定其 HEAD oid，再完整分頁 |
-| 作者 | 使用 GitHub user ID 篩選該帳號作者；不讀取 email 或推測其他身份 |
-| Commit 範圍 | 排除多個 parent 的 merge commits；每 repo 依 oid 去重，保留根 commit |
-| 每日日期 | `committedDate` 轉 `Asia/Taipei`（UTC+8），並非 authored date 或 push date |
-| 涵蓋期間 | 同步當日及往前 364 日；當日截至本次同步開始時間 |
-| 新增／刪除 | GitHub Commit 的 `additions`／`deletions` |
-| 淨增／變更 | 新增減刪除／新增加刪除 |
-| 活躍日 | 至少一個符合條件的 commit，包含零行數 commit |
-| 前期比較 | 緊接在當期之前的等長期間；超出範圍、帳號涵蓋不足或同步不完整時顯示無前期資料 |
-
-行數包含所有文字檔案，包含文件、產生檔案與 lockfiles。二進位內容沒有可加總的文字行數。未合併到預設分支的工作、未與 GitHub 帳號關聯的作者不會計入；重新編寫歷史、squash 或搬移 repo 可能改變結果。這份報告呈現代碼變更量，不能直接視為生產力或程式碼品質評分。
-
-GitHub 欄位定義可見 [Commit 與 CommitAuthor 官方文件](https://docs.github.com/en/graphql/reference/commits#commit)，API 額度見 [GraphQL 限制](https://docs.github.com/en/graphql/overview/rate-limits-and-query-limits-for-the-graphql-api)。
-
-## 同步與資料保存
-
-同步先透過 REST `/user/installations` 核對個人帳號安裝與權限，完整分頁 `/user/installations/{id}/repositories` 取得允許範圍，再向 `https://api.github.com/graphql` 依 repository node ID 分批查詢 metadata 及 commit 數值。不 clone repo，不取得原始碼、檔案內容、patch、commit 訊息或作者 email。登入直接向 GitHub 申請 device code 並輪詢授權結果；遵守輪詢間隔、slow_down、取消與逾時。取得或更新 token 後以 REST `/user` 核對身份，防止不同帳號資料混用。
-
-Access／refresh token 只用於服務端 OAuth 與 API 請求及作業系統憑證管理，不放入 URL、報告、設定、瀏覽器儲存或 API 回應。一次性 device code 與 user code 在授權結束後從程序狀態清除。網路、API 額度、登入失效與 OAuth 設定錯誤會顯示可重試的提示。
-
-快取位於 `.cache/report.json`，version 2 包含各帳號獨立的報告及最後同步嘗試／失敗狀態，整份快取以暫存檔加 rename 保存。舊版 version 1 無需刪除，載入時自動轉換，下一次保存時寫入新版。內容只有帳號、repo metadata、每日聚合數字及涵蓋狀態；快取、截圖、build 與測試產物皆由 `.gitignore` 排除。CSV 與列印報告可能包含私人 repo 名稱，分享時請自行選擇對象。
-
-單一 repo 失敗時，該帳號本輪報告標為 partial，列出原因，該 repo 不使用上一輪資料混入本次統計；全域同步或快取寫入失敗時保留上次報告，介面顯示錯誤。其他帳號的報告保留各自的同步時間，不會冒充已於本次更新。可按「同步」或「重試」重新查詢。
-
-服務只監聽 `127.0.0.1`，限制本機 Host、拒絕跨來源 API 請求，並禁止嵌入外部 frame。本版本供每位使用者下載後在自己的電腦執行；若要部署成多人共用的公開網站，仍需另外設計網站登入、使用者隔離與服務端資料保存。
-
-## 開發與驗證
+The stack is React, TypeScript, Vite, Recharts, Tabler Icons, Express, and direct GitHub REST / GraphQL calls.
 
 ```powershell
-# 同時啟動本機 API 與 Vite；開啟 http://127.0.0.1:5173
+# API + Vite development server: http://127.0.0.1:5173
 npm.cmd run dev
 
-# 核心統計、分頁、同步與 API 測試
+# Core statistics, authentication, API, and synchronization tests
 npm.cmd test
 
-# 型別檢查與 production build
+# Type checks and production build
 npm.cmd run build
 
-# 桌面／手機 E2E（Windows Microsoft Edge）
+# Desktop / mobile browser tests (Microsoft Edge)
 npm.cmd run test:e2e
 
-# 一次執行全部驗證
+# All checks
 npm.cmd run validate
+
+# Regenerate masked demo screenshots after building
+npm.cmd run docs:screenshots
 ```
 
-E2E 使用明確的測試資料與 API mocks，涵蓋中英文與深淺主題切換及保存、帳號／repo 篩選、多帳號合計、CSV、列印、帳號區塊收合、日期涵蓋重新檢查、空資料、partial、錯誤、App 設定、零登入、授權／安裝／切換後自動同步、未安裝時禁止同步、session 憑證提示及移除登入。核心測試涵蓋直接 OAuth／HTTP／GraphQL、token 更新與身份核對、安裝隔離、repository 白名單分頁與 App 權限核對；Windows 憑證保存測試使用獨立的暫存服務名稱並於測試後清除。2026-10-04 已通過 40 項核心／API 測試、production build 與 46 項桌面／手機 E2E；兩個真人帳號完成 GitHub App 授權、安裝及同步，報告涵蓋至 2026-10-04，皆無 partial 或同步錯誤。Playwright 目前指定本機 Microsoft Edge。
+Local E2E tests require Microsoft Edge. Tests use mock GitHub responses and synthetic reports rather than your accounts. Windows credential tests use a separate temporary service name and remove their test entries.
 
-實際資料的畫面檢查需要先啟動 `npm.cmd start`：
-
-```powershell
-node scripts/capture-preview.mjs
-```
-
-截圖儲存至忽略的 `artifacts/`。
-
-## 原始碼配置
+The last local verification on **2026-10-04** passed **48 core / API tests**, the production build, and **56 desktop / mobile E2E tests**. Automated validation runs on Windows through [GitHub Actions](https://github.com/danieltsai0423/gitrecord/actions/workflows/validate.yml).
 
 ```text
-src/                  React、圖表、熱圖、篩選與列印樣式
-shared/report.ts      型別、日期、聚合、篩選與 CSV
-server/github.ts      直接 GraphQL、固定 HEAD 與完整分頁
-server/oauth.ts       GitHub device flow、身份查詢與 token 更新
-server/auth.ts        登入清單、帳號切換、取消與同步憑證
-server/installation.ts 公開 App 核對、安裝與 repository 白名單
-server/credentials.ts OS 憑證管理與公開 App 設定
-server/http.ts        有時限及大小限制的 JSON HTTP 請求
-server/app.ts         本機 API、同步鎖與快取
-server/index.ts       Production 啟動入口
-oauth.config.json     發布者提供的公開 App ID／Client ID／slug
-scripts/              開發、可選命令同步與畫面驗證
-tests/                核心測試與瀏覽器 E2E
-specs/github-dashboard/  使用者已確認的規格、計畫與任務
+src/                     Dashboard, themes, translations, and UI components
+shared/report.ts         Report types, dates, aggregation, filters, and CSV
+shared/reflection.ts     Reviews, account comparisons, weekly rhythm, and masking
+src/recap.ts             Local PNG / Markdown recap generation
+server/auth.ts           Account connections and synchronization identity
+server/oauth.ts          Device authorization and token refresh
+server/installation.ts   App validation and repository access boundaries
+server/credentials.ts    OS credential storage and public configuration
+server/github.ts         Fixed-HEAD, paginated GitHub statistics queries
+server/app.ts            Local API, sync locking, and report persistence
+scripts/                 Development, optional sync, and documentation capture
+tests/                   Core / API and browser tests
+specs/                   Original and subsequent feature specifications
+docs/images/             Masked screenshots generated from synthetic data
 ```
 
-圖示來自 Tabler Icons；本機憑證管理使用 `@napi-rs/keyring`。授權見 [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md)。
+## Contributing and license
+
+Bug reports and feature proposals are welcome through [GitHub Issues](https://github.com/danieltsai0423/gitrecord/issues). Please include a reproducible example without tokens, private repository names, or report caches. Read [CONTRIBUTING.md](CONTRIBUTING.md) before submitting a pull request, and use [private security reporting](SECURITY.md) for vulnerabilities.
+
+GitRecord is available under the **[MIT License](LICENSE)**. Third-party components retain their own licenses; see [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).

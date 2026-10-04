@@ -2,6 +2,9 @@
   "name": "gitrecord",
   "version": "1.0.0",
   "private": true,
+  "description": "Local GitHub activity analytics with multi-account reviews and privacy-aware exports.",
+  "license": "MIT",
+  "repository": { "type": "git", "url": "https://github.com/danieltsai0423/gitrecord.git" },
   "type": "module",
   "engines": {
     "node": ">=22.12.0"
@@ -14,6 +17,7 @@
     "sync": "node --import tsx scripts/sync.ts",
     "test": "node --import tsx --test tests/*.test.ts",
     "test:e2e": "playwright test",
+    "docs:screenshots": "node scripts/capture-docs.mjs",
     "validate": "npm run test && npm run build && npm run test:e2e"
   },
   "dependencies": {

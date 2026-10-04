@@ -1,5 +1,22 @@
 # Third-party notices
 
+GitRecord's own source is licensed under the root `LICENSE`. Dependencies retain
+their individual licenses in the installed npm packages. The direct components
+used by the application include:
+
+| Component | License | Upstream |
+| --- | --- | --- |
+| React / React DOM | MIT; Copyright Meta Platforms, Inc. and affiliates | https://github.com/facebook/react |
+| Recharts | MIT; Copyright 2015-present recharts | https://github.com/recharts/recharts |
+| Express | MIT | https://github.com/expressjs/express |
+| Tabler Icons | MIT; copyright notice below | https://github.com/tabler/tabler-icons |
+| `@napi-rs/keyring` | MIT; copyright notice below | https://github.com/Brooooooklyn/keyring-node |
+
+The MIT text below also applies to React / React DOM and Recharts under their
+copyright notices above. Consult package license files for full notices and
+transitive dependency licenses. Development tools, including Vite, TypeScript,
+and Playwright, are installed from npm with their own license files.
+
 OS credential storage uses `@napi-rs/keyring` under the MIT License. Source: https://github.com/Brooooooklyn/keyring-node
 
 Copyright (c) 2020 N-API for Rust. The MIT License text below applies to this dependency as well.
